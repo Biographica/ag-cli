@@ -9,7 +9,11 @@
 #   taxon_id:       int  — primary NCBI taxon ID
 #   common_names:   list — lowercase common names (used as lookup keys)
 #   abbreviations:  list — short codes (used as lookup keys; case-insensitive)
-#   genome_build:   str  — reference genome assembly identifier; "" if unknown
+#   genome_build:   str  — primary reference assembly identifier (e.g. TAIR10, IRGSP-1.0);
+#                          "" if unknown. One entry per species — does not enumerate all
+#                          available builds, pan-genomes, or custom assemblies.
+#                          Future: pangenome support (e.g. multiple genome_builds) is
+#                          a planned extension.
 #   notes:          str  — optional free-text notes
 
 species:

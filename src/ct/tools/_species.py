@@ -21,9 +21,9 @@ from typing import Any
 
 _REGISTRY_PATH = Path(__file__).parent.parent / "data" / "species_registry.yaml"
 
-# Default plant species (the model plant)
-_DEFAULT_TAXON: int = 3702
-_DEFAULT_BINOMIAL: str = "Arabidopsis thaliana"
+# Sentinel defaults — 0 and "" indicate "not found / unknown species"
+_DEFAULT_TAXON: int = 0
+_DEFAULT_BINOMIAL: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -91,7 +91,9 @@ def resolve_species_taxon(species: str, default_taxon: int = _DEFAULT_TAXON) -> 
     Args:
         species: Species name, abbreviation, or taxon ID string.
         default_taxon: Taxon ID to return when species is unknown or empty.
-            Defaults to 3702 (Arabidopsis thaliana).
+            Defaults to 0 (unknown). Callers that receive 0 should treat the
+            species as unresolved and return an appropriate error rather than
+            silently querying a fallback organism.
 
     Returns:
         NCBI taxon ID as an integer.
@@ -123,7 +125,8 @@ def resolve_species_binomial(species: str, default: str = _DEFAULT_BINOMIAL) -> 
     Args:
         species: Species name, abbreviation, or taxon ID string.
         default: Canonical binomial to return when species is unknown or empty.
-            Defaults to 'Arabidopsis thaliana'.
+            Defaults to empty string (unknown). Callers that receive "" should
+            treat the species as unresolved.
 
     Returns:
         Canonical binomial name as stored in the registry
@@ -151,7 +154,7 @@ def resolve_species_binomial(species: str, default: str = _DEFAULT_BINOMIAL) -> 
     return default
 
 
-def resolve_species_ensembl_name(species: str, default: str = "arabidopsis_thaliana") -> str:
+def resolve_species_ensembl_name(species: str, default: str = "") -> str:
     """Resolve a species string to the Ensembl REST API species path component.
 
     Ensembl uses lowercase binomial names with underscores, e.g.:
@@ -170,6 +173,10 @@ def resolve_species_ensembl_name(species: str, default: str = "arabidopsis_thali
 
 def resolve_species_genome_build(species: str, default: str = "") -> str:
     """Resolve a species string to its reference genome build identifier.
+
+    Returns the primary reference assembly identifier used by public databases
+    (e.g. Ensembl Plants, NCBI).  This is a single string per species — it
+    does not enumerate all available assemblies, pan-genomes, or custom builds.
 
     Args:
         species: Species name, abbreviation, or taxon ID string.
