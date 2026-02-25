@@ -15,7 +15,7 @@ Milestone 2 (Shortlisting Pipeline Framework) is v2 scope and not represented he
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Fork setup, plant system prompt, runtime pharma tool filtering, and rebranding (completed 2026-02-25)
-- [x] **Phase 2: Data Infrastructure** - Local-first data loader pattern, species registry, manifest system, organism validation (completed 2026-02-25)
+- [ ] **Phase 2: Data Infrastructure** - Local-first data loader pattern, species registry, manifest system, organism validation (gap closure in progress)
 - [ ] **Phase 3: External Connectors** - STRING, PubMed, and Lens.org API connectors with plant-specific query construction
 - [ ] **Phase 4: Plant Genomics Tools** - Gene annotation, ortholog mapping, co-expression analysis, GFF parsing, GWAS/QTL lookup
 - [ ] **Phase 5: Gene Editing and Evidence Tools** - CRISPR guide design, editability scoring, paralogy scoring, multi-species evidence gathering
@@ -46,12 +46,13 @@ Plans:
   2. A manifest file exists for each data folder describing available datasets, species covered, schema, and content hash; the agent reads the manifest to discover what data is available before loading files
   3. A tool call specifying `species="arabidopsis_thaliana"` on a dataset containing only rice data returns an organism validation error, not silently mismatched results
   4. `ag species list` (or equivalent) returns a registry of supported species with taxon ID, common name, and genome build
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Species registry YAML, manifest loader, ag species list CLI command (DATA-02, DATA-04)
-- [ ] 02-02-PLAN.md — Organism validation middleware (@validate_species decorator) (DATA-03)
-- [ ] 02-03-PLAN.md — Plant data tools (data.list_datasets, data.load_expression) and downloader entry (DATA-01)
+- [x] 02-01-PLAN.md — Species registry YAML, manifest loader, ag species list CLI command (DATA-02, DATA-04)
+- [x] 02-02-PLAN.md — Organism validation middleware (@validate_species decorator) (DATA-03)
+- [x] 02-03-PLAN.md — Plant data tools (data.list_datasets, data.load_expression) and downloader entry (DATA-01)
+- [ ] 02-04-PLAN.md — Gap closure: fix unknown-species default (0 not Arabidopsis) and genome_build docs (DATA-02)
 
 ### Phase 3: External Connectors
 **Goal**: The agent can query STRING plant PPI networks, search PubMed with plant-specific queries, and retrieve patent data from Lens.org as evidence sources in a research workflow
@@ -109,7 +110,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete    | 2026-02-25 |
-| 2. Data Infrastructure | 3/3 | Complete   | 2026-02-25 |
+| 2. Data Infrastructure | 3/4 | Gap closure | - |
 | 3. External Connectors | 0/3 | Not started | - |
 | 4. Plant Genomics Tools | 0/3 | Not started | - |
 | 5. Gene Editing and Evidence Tools | 0/3 | Not started | - |
