@@ -40,10 +40,6 @@ from typing import Any, Callable
 
 logger = logging.getLogger("ct.tools.validation")
 
-# The default binomial returned by resolve_species_binomial when the input is
-# unknown — used to detect "species not in registry" vs "species IS in registry".
-_DEFAULT_BINOMIAL = "Arabidopsis thaliana"
-
 
 def validate_species(
     dataset_dir_kwarg: str = "dataset_dir",
@@ -181,6 +177,10 @@ def _check_species(species: str, dataset_dir: str) -> str | None:
         A warning string if the species is not covered, or None if OK / unknown
         manifest state.  Never raises.
     """
+    # Sentinel value that cannot exist in the registry — used to detect
+    # "species not in registry" without relying on the default fallback value.
+    _SENTINEL = "__SENTINEL_NOT_IN_REGISTRY__"
+
     try:
         from ct.data.manifest import load_manifest, manifest_species  # lazy import
         from ct.tools._species import resolve_species_binomial  # lazy import
@@ -197,44 +197,27 @@ def _check_species(species: str, dataset_dir: str) -> str | None:
         if not covered:
             return None
 
-        # Resolve requested species to canonical binomial.
-        # resolve_species_binomial returns _DEFAULT_BINOMIAL when the species
-        # is not in the registry — we detect this to generate the right message.
-        canonical = resolve_species_binomial(species, default=_DEFAULT_BINOMIAL)
+        # Determine whether the species is in the registry at all.
+        # We use a sentinel default: if resolve returns the sentinel, the species
+        # is NOT in the registry.  This is reliable regardless of what the
+        # standard default is.
+        canonical = resolve_species_binomial(species, default=_SENTINEL)
 
-        # Build a set of lower-cased covered names for case-insensitive comparison
-        covered_lower = {s.strip().lower() for s in covered}
-
-        if canonical.lower() in covered_lower:
-            # Species IS covered — no warning
-            return None
-
-        # Check whether the canonical name is the default fallback (meaning the
-        # species was NOT found in the registry at all).
-        # We detect this by checking if the requested name resolves to default
-        # AND the requested name (normalised) is NOT itself the default binomial.
-        request_normalised = " ".join(species.strip().lower().split())
-        default_normalised = _DEFAULT_BINOMIAL.lower()
-        is_default_arabidopsis_covered = _DEFAULT_BINOMIAL.lower() in covered_lower
-
-        if canonical.lower() == default_normalised and request_normalised != default_normalised:
-            # The species was NOT in the registry; we got the default fallback.
-            # Only warn if arabidopsis is NOT in the covered list (otherwise the
-            # data might still match — e.g. requesting arabidopsis on an
-            # arabidopsis-only dataset is always fine).
-            if not is_default_arabidopsis_covered:
-                return (
-                    f"Species '{species}' is not in the registry; "
-                    "metadata could not be verified. Data returned anyway."
-                )
-            # If arabidopsis IS covered and we resolved to arabidopsis by default,
-            # it could be ambiguous — emit the registry note anyway.
+        if canonical == _SENTINEL:
+            # Species is NOT in the registry — emit a note, never block
             return (
                 f"Species '{species}' is not in the registry; "
                 "metadata could not be verified. Data returned anyway."
             )
 
-        # The species IS in the registry but NOT in the covered list
+        # Species IS in the registry.  Check if it appears in the covered list.
+        covered_lower = {s.strip().lower() for s in covered}
+
+        if canonical.lower() in covered_lower:
+            # Species is covered — no warning
+            return None
+
+        # Species is known but NOT covered by this dataset
         covered_str = ", ".join(covered)
         return (
             f"Species mismatch: requested '{species}' (resolved to '{canonical}') "
