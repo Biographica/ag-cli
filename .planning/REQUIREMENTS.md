@@ -16,9 +16,9 @@ Requirements for Milestone 1: Working Plant Science Agent.
 
 ### Data Access
 
-- [ ] **DATA-01**: Agent can explore and analyse data from a local project folder (parquets, CSVs, GFFs) using the Python sandbox
+- [x] **DATA-01**: Agent can explore and analyse data from a local project folder (parquets, CSVs, GFFs) using the Python sandbox
 - [x] **DATA-02**: Data manifest pattern — each data folder has a manifest (JSON/YAML) describing available datasets, species, schema, and provenance
-- [ ] **DATA-03**: Organism validation middleware — tools that access external data validate species consistency before returning results
+- [x] **DATA-03**: Organism validation middleware — tools that access external data validate species consistency before returning results
 - [x] **DATA-04**: Species registry — central registry of supported species with metadata (taxon ID, common name, genome build)
 
 ### External Connectors
@@ -100,9 +100,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUN-02 | Phase 1 | Complete (01-01) |
 | FOUN-03 | Phase 1 | Complete |
 | FOUN-04 | Phase 1 | Complete |
-| DATA-01 | Phase 2 | Pending |
+| DATA-01 | Phase 2 | Complete |
 | DATA-02 | Phase 2 | Complete |
-| DATA-03 | Phase 2 | Pending |
+| DATA-03 | Phase 2 | Complete |
 | DATA-04 | Phase 2 | Complete |
 | CONN-01 | Phase 3 | Pending |
 | CONN-02 | Phase 3 | Pending |
