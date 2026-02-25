@@ -299,9 +299,9 @@ app.add_typer(tool_app, name="tool")
 @tool_app.command("list")
 def tool_list():
     """List all available tools."""
-    from ct.tools import registry, ensure_loaded, tool_load_errors
+    from ct.tools import registry, ensure_loaded, tool_load_errors, PLANT_SCIENCE_CATEGORIES
     ensure_loaded()
-    console.print(registry.list_tools_table())
+    console.print(registry.list_tools_table(include_categories=PLANT_SCIENCE_CATEGORIES))
     errors = tool_load_errors()
     if errors:
         names = ", ".join(sorted(errors.keys())[:8])

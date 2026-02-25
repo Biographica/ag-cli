@@ -32,11 +32,12 @@ def test_knowledge_primer_claimed_tools_exist():
     assert missing == [], f"Knowledge primer references unknown tools: {missing}"
 
 
-def test_knowledge_primer_mentions_viability_suite():
-    claimed = _claimed_tools_from_primer(KNOWLEDGE_PRIMER)
-    expected = {
-        "viability.dose_response",
-        "viability.tissue_selectivity",
-        "viability.compare_compounds",
-    }
-    assert expected.issubset(claimed)
+def test_knowledge_primer_mentions_plant_science_tools():
+    """Knowledge primer should reference plant-relevant tools, not pharma viability tools."""
+    # Plant science primer should reference genomics and expression tools
+    assert "genomics" in KNOWLEDGE_PRIMER.lower(), "Knowledge primer should mention genomics"
+    assert "expression" in KNOWLEDGE_PRIMER.lower(), "Knowledge primer should mention expression"
+    assert "network" in KNOWLEDGE_PRIMER.lower(), "Knowledge primer should mention network"
+    # Pharma-specific viability tools should not be referenced
+    assert "viability.dose_response" not in KNOWLEDGE_PRIMER
+    assert "IC50" not in KNOWLEDGE_PRIMER

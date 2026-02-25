@@ -308,10 +308,18 @@ class AgentRunner:
         ctx = context or {}
 
         # ----- Build MCP server -----
-        exclude_cats = set()
-        if not config.get("agent.enable_experimental_tools", False):
-            from ct.tools import EXPERIMENTAL_CATEGORIES
-            exclude_cats = set(EXPERIMENTAL_CATEGORIES)
+        # Compute exclude set from the plant science category allowlist.
+        # Any category NOT in PLANT_SCIENCE_CATEGORIES is hidden from the agent.
+        # EXPERIMENTAL_CATEGORIES are additionally excluded regardless of allowlist.
+        from ct.tools import registry, EXPERIMENTAL_CATEGORIES, PLANT_SCIENCE_CATEGORIES
+        from ct.tools import ensure_loaded as _ensure_loaded
+        _ensure_loaded()
+        all_categories = set(registry.categories())
+        exclude_cats = (all_categories - PLANT_SCIENCE_CATEGORIES) | set(EXPERIMENTAL_CATEGORIES)
+
+        # Allow override for experimental tools if explicitly enabled
+        if config.get("agent.enable_experimental_tools", False):
+            exclude_cats -= set(EXPERIMENTAL_CATEGORIES)
 
         server, sandbox, tool_names, code_trace_buffer = create_ct_mcp_server(
             self.session,

@@ -13,6 +13,32 @@ from rich.table import Table
 
 
 EXPERIMENTAL_CATEGORIES = frozenset({"compute", "cro"})
+
+# Plant science category allowlist — tools in these categories are exposed to the agent.
+# Everything else is excluded (hard invisible at the MCP layer).
+# Allowlist approach: anything not explicitly listed is hidden by default,
+# which is safer than a blocklist for a new domain.
+PLANT_SCIENCE_CATEGORIES = frozenset({
+    "genomics",
+    "network",
+    "literature",
+    "data_api",
+    "protein",
+    "omics",
+    "statistics",
+    "dna",
+    "code",
+    "files",
+    "shell",
+    "ops",
+    "claude",
+    "expression",
+    "singlecell",
+    "notification",
+    "remote_data",
+    "experiment",
+    "parity",
+})
 _TOOL_MODULES = (
     "target",
     "structure",
@@ -106,15 +132,22 @@ class ToolRegistry:
             tools = [t for t in tools if t.category == category]
         return sorted(tools, key=lambda t: t.name)
 
-    def list_tools_table(self) -> Table:
-        """Render tool list as a rich table."""
-        table = Table(title="ct Tools")
+    def list_tools_table(self, include_categories: frozenset | None = None) -> Table:
+        """Render tool list as a rich table.
+
+        Args:
+            include_categories: When provided, only show tools whose category is
+                in this set. Pass PLANT_SCIENCE_CATEGORIES to filter to ag tools.
+        """
+        table = Table(title="ag Tools")
         table.add_column("Tool", style="cyan")
         table.add_column("Status")
         table.add_column("Description")
         table.add_column("Data Required", style="dim")
 
         for tool in self.list_tools():
+            if include_categories is not None and tool.category not in include_categories:
+                continue
             data_str = ", ".join(tool.requires_data) if tool.requires_data else "-"
             if tool.name == "claude.code":
                 status = "[yellow]guarded (opt-in)[/yellow]"
