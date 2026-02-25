@@ -1,139 +1,81 @@
 """
-Interim species resolution helper for ag-cli plant science tools.
+YAML-backed species resolution helper for ag-cli plant science tools.
 
-Maps common species names, abbreviations, and binomial names to NCBI taxon IDs
-and canonical binomial names. Used by all tools that make species-specific API
-calls (STRING, UniProt, Ensembl, MyGene, etc.).
+Maps common species names, abbreviations, and binomial names to NCBI taxon IDs,
+canonical binomial names, and reference genome build identifiers.
+
+The single source of truth is src/ct/data/species_registry.yaml — all additions
+and corrections should be made there.  Used by all tools that make
+species-specific API calls (STRING, UniProt, Ensembl, MyGene, etc.).
 """
 
 from __future__ import annotations
 
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
+
 # ---------------------------------------------------------------------------
-# Taxon map: maps lowercase key to (taxon_id, canonical_binomial)
-# Keys include: canonical binomial, common names, abbreviations
+# Registry path — relative to this module's location
 # ---------------------------------------------------------------------------
 
-_PLANT_TAXON_MAP: dict[str, tuple[int, str]] = {
-    # ---- Core model plants ----
-    "arabidopsis thaliana":   (3702, "Arabidopsis thaliana"),
-    "arabidopsis":            (3702, "Arabidopsis thaliana"),
-    "thale cress":            (3702, "Arabidopsis thaliana"),
-    "at":                     (3702, "Arabidopsis thaliana"),
-
-    # ---- Rice ----
-    "oryza sativa":           (4530, "Oryza sativa"),
-    "oryza sativa japonica":  (39947, "Oryza sativa"),
-    "oryza sativa indica":    (39946, "Oryza sativa"),
-    "rice":                   (4530, "Oryza sativa"),
-    "os":                     (4530, "Oryza sativa"),
-
-    # ---- Maize / corn ----
-    "zea mays":               (4577, "Zea mays"),
-    "maize":                  (4577, "Zea mays"),
-    "corn":                   (4577, "Zea mays"),
-    "zm":                     (4577, "Zea mays"),
-
-    # ---- Tomato ----
-    "solanum lycopersicum":   (4081, "Solanum lycopersicum"),
-    "lycopersicon esculentum": (4081, "Solanum lycopersicum"),
-    "tomato":                 (4081, "Solanum lycopersicum"),
-    "sl":                     (4081, "Solanum lycopersicum"),
-
-    # ---- Potato ----
-    "solanum tuberosum":      (4113, "Solanum tuberosum"),
-    "potato":                 (4113, "Solanum tuberosum"),
-    "st":                     (4113, "Solanum tuberosum"),
-
-    # ---- Wheat ----
-    "triticum aestivum":      (4565, "Triticum aestivum"),
-    "wheat":                  (4565, "Triticum aestivum"),
-    "bread wheat":            (4565, "Triticum aestivum"),
-    "ta":                     (4565, "Triticum aestivum"),
-
-    # ---- Soybean ----
-    "glycine max":            (3847, "Glycine max"),
-    "soybean":                (3847, "Glycine max"),
-    "soy":                    (3847, "Glycine max"),
-    "gm":                     (3847, "Glycine max"),
-
-    # ---- Oilseed rape / canola ----
-    "brassica napus":         (3708, "Brassica napus"),
-    "oilseed rape":           (3708, "Brassica napus"),
-    "canola":                 (3708, "Brassica napus"),
-    "rapeseed":               (3708, "Brassica napus"),
-    "bn":                     (3708, "Brassica napus"),
-
-    # ---- Tobacco ----
-    "nicotiana tabacum":      (4097, "Nicotiana tabacum"),
-    "tobacco":                (4097, "Nicotiana tabacum"),
-    "nt":                     (4097, "Nicotiana tabacum"),
-
-    # ---- Poplar ----
-    "populus trichocarpa":    (3694, "Populus trichocarpa"),
-    "black cottonwood":       (3694, "Populus trichocarpa"),
-    "poplar":                 (3694, "Populus trichocarpa"),
-    "pt":                     (3694, "Populus trichocarpa"),
-
-    # ---- Barley ----
-    "hordeum vulgare":        (4513, "Hordeum vulgare"),
-    "barley":                 (4513, "Hordeum vulgare"),
-    "hv":                     (4513, "Hordeum vulgare"),
-
-    # ---- Sorghum ----
-    "sorghum bicolor":        (4558, "Sorghum bicolor"),
-    "sorghum":                (4558, "Sorghum bicolor"),
-    "sb":                     (4558, "Sorghum bicolor"),
-
-    # ---- Medicago (model legume) ----
-    "medicago truncatula":    (3880, "Medicago truncatula"),
-    "barrel medic":           (3880, "Medicago truncatula"),
-    "medicago":               (3880, "Medicago truncatula"),
-    "mt":                     (3880, "Medicago truncatula"),
-
-    # ---- Lotus (model legume) ----
-    "lotus japonicus":        (34305, "Lotus japonicus"),
-    "lotus":                  (34305, "Lotus japonicus"),
-    "lj":                     (34305, "Lotus japonicus"),
-
-    # ---- Banana ----
-    "musa acuminata":         (214687, "Musa acuminata"),
-    "banana":                 (214687, "Musa acuminata"),
-
-    # ---- Cassava ----
-    "manihot esculenta":      (3983, "Manihot esculenta"),
-    "cassava":                (3983, "Manihot esculenta"),
-
-    # ---- Strawberry ----
-    "fragaria vesca":         (57918, "Fragaria vesca"),
-    "strawberry":             (57918, "Fragaria vesca"),
-
-    # ---- Cotton ----
-    "gossypium hirsutum":     (3635, "Gossypium hirsutum"),
-    "cotton":                 (3635, "Gossypium hirsutum"),
-
-    # ---- Grape ----
-    "vitis vinifera":         (29760, "Vitis vinifera"),
-    "grapevine":              (29760, "Vitis vinifera"),
-    "grape":                  (29760, "Vitis vinifera"),
-
-    # ---- Cross-species reference organisms (retained for interoperability) ----
-    "homo sapiens":           (9606, "Homo sapiens"),
-    "human":                  (9606, "Homo sapiens"),
-    "hs":                     (9606, "Homo sapiens"),
-    "mus musculus":           (10090, "Mus musculus"),
-    "mouse":                  (10090, "Mus musculus"),
-    "mm":                     (10090, "Mus musculus"),
-    "rattus norvegicus":      (10116, "Rattus norvegicus"),
-    "rat":                    (10116, "Rattus norvegicus"),
-    "yeast":                  (559292, "Saccharomyces cerevisiae"),
-    "saccharomyces cerevisiae": (559292, "Saccharomyces cerevisiae"),
-    "zebrafish":              (7955, "Danio rerio"),
-    "danio rerio":            (7955, "Danio rerio"),
-}
+_REGISTRY_PATH = Path(__file__).parent.parent / "data" / "species_registry.yaml"
 
 # Default plant species (the model plant)
 _DEFAULT_TAXON: int = 3702
 _DEFAULT_BINOMIAL: str = "Arabidopsis thaliana"
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=1)
+def _load_registry() -> list[dict[str, Any]]:
+    """Load and return the species list from the YAML registry.
+
+    Cached after first call — the file is read once per process lifetime.
+    """
+    import yaml  # lazy import to avoid import-time overhead
+
+    with open(_REGISTRY_PATH, encoding="utf-8") as fh:
+        data = yaml.safe_load(fh)
+    return data.get("species", [])
+
+
+@lru_cache(maxsize=1)
+def _build_lookup() -> dict[str, tuple[int, str, str]]:
+    """Build and return a normalised lookup dict from the registry.
+
+    Maps every lowercase key (binomial, common names, abbreviations) to a
+    ``(taxon_id, binomial, genome_build)`` tuple.  The result is cached.
+    """
+    lookup: dict[str, tuple[int, str, str]] = {}
+
+    for entry in _load_registry():
+        taxon_id: int = entry["taxon_id"]
+        binomial: str = entry["binomial"]
+        genome_build: str = entry.get("genome_build", "")
+        value = (taxon_id, binomial, genome_build)
+
+        # Canonical binomial (lowercase)
+        lookup[binomial.lower()] = value
+
+        # Common names (already lowercase in YAML, but normalise anyway)
+        for name in entry.get("common_names", []):
+            lookup[" ".join(name.lower().split())] = value
+
+        # Abbreviations (lowercase)
+        for abbrev in entry.get("abbreviations", []):
+            lookup[abbrev.lower()] = value
+
+    return lookup
+
+
+# ---------------------------------------------------------------------------
+# Public API — signatures are IDENTICAL to the previous in-memory version
+# ---------------------------------------------------------------------------
 
 
 def resolve_species_taxon(species: str, default_taxon: int = _DEFAULT_TAXON) -> int:
@@ -166,11 +108,10 @@ def resolve_species_taxon(species: str, default_taxon: int = _DEFAULT_TAXON) -> 
     # Normalise for lookup: lowercase, collapse internal whitespace
     key = " ".join(s.lower().split())
 
-    entry = _PLANT_TAXON_MAP.get(key)
+    entry = _build_lookup().get(key)
     if entry is not None:
         return entry[0]
 
-    # Unknown species — return default
     return default_taxon
 
 
@@ -185,7 +126,9 @@ def resolve_species_binomial(species: str, default: str = _DEFAULT_BINOMIAL) -> 
             Defaults to 'Arabidopsis thaliana'.
 
     Returns:
-        Canonical binomial name as stored in the map (e.g. 'Oryza sativa').
+        Canonical binomial name as stored in the registry
+        (e.g. 'Oryza sativa').  Exact casing is preserved — Ensembl URL
+        construction relies on lowercase conversion of this value.
     """
     if not species:
         return default
@@ -195,13 +138,13 @@ def resolve_species_binomial(species: str, default: str = _DEFAULT_BINOMIAL) -> 
     # Numeric taxon ID — reverse lookup
     if s.isdigit():
         taxon_id = int(s)
-        for _key, (tid, binomial) in _PLANT_TAXON_MAP.items():
-            if tid == taxon_id:
-                return binomial
+        for _value in _build_lookup().values():
+            if _value[0] == taxon_id:
+                return _value[1]
         return default
 
     key = " ".join(s.lower().split())
-    entry = _PLANT_TAXON_MAP.get(key)
+    entry = _build_lookup().get(key)
     if entry is not None:
         return entry[1]
 
@@ -223,3 +166,51 @@ def resolve_species_ensembl_name(species: str, default: str = "arabidopsis_thali
     """
     binomial = resolve_species_binomial(species)
     return binomial.lower().replace(" ", "_")
+
+
+def resolve_species_genome_build(species: str, default: str = "") -> str:
+    """Resolve a species string to its reference genome build identifier.
+
+    Args:
+        species: Species name, abbreviation, or taxon ID string.
+        default: Value to return when species is unknown or has no build set.
+            Defaults to empty string.
+
+    Returns:
+        Genome build string (e.g. 'TAIR10', 'IRGSP-1.0') or *default* if
+        the species is unknown or its genome_build field is empty.
+    """
+    if not species:
+        return default
+
+    s = str(species).strip()
+
+    if s.isdigit():
+        taxon_id = int(s)
+        for _value in _build_lookup().values():
+            if _value[0] == taxon_id:
+                build = _value[2]
+                return build if build else default
+        return default
+
+    key = " ".join(s.lower().split())
+    entry = _build_lookup().get(key)
+    if entry is not None:
+        build = entry[2]
+        return build if build else default
+
+    return default
+
+
+def list_all_species() -> list[dict[str, Any]]:
+    """Return all species entries from the registry as a list of dicts.
+
+    Each dict has the keys: binomial, taxon_id, common_names, abbreviations,
+    genome_build, and optionally notes.
+
+    Used by the ``ag species list`` CLI command.
+
+    Returns:
+        List of species dicts in registry order.
+    """
+    return list(_load_registry())

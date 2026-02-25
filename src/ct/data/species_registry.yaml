@@ -1,0 +1,224 @@
+# Species Registry for ag-cli / Harvest
+#
+# This file is the single source of truth for species resolution.
+# All tools that perform species-specific API calls (STRING, UniProt, Ensembl,
+# MyGene, etc.) resolve species names via ct.tools._species which reads this file.
+#
+# Schema per entry:
+#   binomial:       str  — canonical binomial name (exact casing used in Ensembl URLs)
+#   taxon_id:       int  — primary NCBI taxon ID
+#   common_names:   list — lowercase common names (used as lookup keys)
+#   abbreviations:  list — short codes (used as lookup keys; case-insensitive)
+#   genome_build:   str  — reference genome assembly identifier; "" if unknown
+#   notes:          str  — optional free-text notes
+
+species:
+
+  # ---- Core model plants ----
+
+  - binomial: "Arabidopsis thaliana"
+    taxon_id: 3702
+    common_names:
+      - arabidopsis
+      - thale cress
+    abbreviations:
+      - at
+    genome_build: "TAIR10"
+
+  - binomial: "Oryza sativa"
+    taxon_id: 4530
+    common_names:
+      - rice
+      - oryza sativa japonica
+      - oryza sativa indica
+    abbreviations:
+      - os
+    genome_build: "IRGSP-1.0"
+    notes: >
+      Taxon 4530 is the species-level entry. Subspecies japonica (39947)
+      and indica (39946) are included as common_names aliases that resolve
+      to this entry for convenience.
+
+  - binomial: "Zea mays"
+    taxon_id: 4577
+    common_names:
+      - maize
+      - corn
+    abbreviations:
+      - zm
+    genome_build: "Zm-B73-REFERENCE-NAM-5.0"
+
+  - binomial: "Triticum aestivum"
+    taxon_id: 4565
+    common_names:
+      - wheat
+      - bread wheat
+    abbreviations:
+      - ta
+    genome_build: "IWGSC RefSeq v2.1"
+
+  - binomial: "Glycine max"
+    taxon_id: 3847
+    common_names:
+      - soybean
+      - soy
+    abbreviations:
+      - gm
+    genome_build: "Wm82.a4.v1"
+
+  - binomial: "Solanum lycopersicum"
+    taxon_id: 4081
+    common_names:
+      - tomato
+      - lycopersicon esculentum
+    abbreviations:
+      - sl
+    genome_build: "SL4.0"
+
+  # ---- Additional crop plants ----
+
+  - binomial: "Solanum tuberosum"
+    taxon_id: 4113
+    common_names:
+      - potato
+    abbreviations:
+      - st
+    genome_build: "DM_1-3_516_R44"
+
+  - binomial: "Brassica napus"
+    taxon_id: 3708
+    common_names:
+      - oilseed rape
+      - canola
+      - rapeseed
+    abbreviations:
+      - bn
+    genome_build: "ZS11"
+
+  - binomial: "Nicotiana tabacum"
+    taxon_id: 4097
+    common_names:
+      - tobacco
+    abbreviations:
+      - nt
+    genome_build: "Nitab-v4.5"
+
+  - binomial: "Populus trichocarpa"
+    taxon_id: 3694
+    common_names:
+      - poplar
+      - black cottonwood
+    abbreviations:
+      - pt
+    genome_build: "Pop_tri_v4"
+
+  - binomial: "Hordeum vulgare"
+    taxon_id: 4513
+    common_names:
+      - barley
+    abbreviations:
+      - hv
+    genome_build: "MorexV3"
+
+  - binomial: "Sorghum bicolor"
+    taxon_id: 4558
+    common_names:
+      - sorghum
+    abbreviations:
+      - sb
+    genome_build: "Sorghum_bicolor_NCBIv3"
+
+  - binomial: "Medicago truncatula"
+    taxon_id: 3880
+    common_names:
+      - medicago
+      - barrel medic
+    abbreviations:
+      - mt
+    genome_build: "MtrunA17r5.0"
+
+  - binomial: "Lotus japonicus"
+    taxon_id: 34305
+    common_names:
+      - lotus
+    abbreviations:
+      - lj
+    genome_build: "Lj3.0"
+
+  # ---- Less common crop/research plants (genome_build TBD) ----
+
+  - binomial: "Musa acuminata"
+    taxon_id: 214687
+    common_names:
+      - banana
+    abbreviations: []
+    genome_build: ""
+
+  - binomial: "Manihot esculenta"
+    taxon_id: 3983
+    common_names:
+      - cassava
+    abbreviations: []
+    genome_build: ""
+
+  - binomial: "Fragaria vesca"
+    taxon_id: 57918
+    common_names:
+      - strawberry
+    abbreviations: []
+    genome_build: ""
+
+  - binomial: "Gossypium hirsutum"
+    taxon_id: 3635
+    common_names:
+      - cotton
+    abbreviations: []
+    genome_build: ""
+
+  - binomial: "Vitis vinifera"
+    taxon_id: 29760
+    common_names:
+      - grape
+      - grapevine
+    abbreviations: []
+    genome_build: ""
+
+  # ---- Cross-species reference organisms (retained for interoperability) ----
+
+  - binomial: "Homo sapiens"
+    taxon_id: 9606
+    common_names:
+      - human
+    abbreviations:
+      - hs
+    genome_build: ""
+    notes: "Retained for cross-species interoperability (e.g. ortholog lookups, STRING)"
+
+  - binomial: "Mus musculus"
+    taxon_id: 10090
+    common_names:
+      - mouse
+    abbreviations:
+      - mm
+    genome_build: ""
+
+  - binomial: "Rattus norvegicus"
+    taxon_id: 10116
+    common_names:
+      - rat
+    abbreviations: []
+    genome_build: ""
+
+  - binomial: "Saccharomyces cerevisiae"
+    taxon_id: 559292
+    common_names:
+      - yeast
+    abbreviations: []
+    genome_build: ""
+
+  - binomial: "Danio rerio"
+    taxon_id: 7955
+    common_names:
+      - zebrafish
+    abbreviations: []
+    genome_build: ""
