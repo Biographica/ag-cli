@@ -39,12 +39,49 @@ def _flatten_hits(payload, key: str = "hits") -> list[dict]:
 
 
 _MYGENE_SPECIES_MAP = {
+    # Plant species — taxon IDs used directly by MyGene.info
+    "arabidopsis thaliana": "3702",
+    "arabidopsis": "3702",
+    "at": "3702",
+    "oryza sativa": "4530",
+    "rice": "4530",
+    "os": "4530",
+    "zea mays": "4577",
+    "maize": "4577",
+    "corn": "4577",
+    "zm": "4577",
+    "solanum lycopersicum": "4081",
+    "tomato": "4081",
+    "solanum tuberosum": "4113",
+    "potato": "4113",
+    "triticum aestivum": "4565",
+    "wheat": "4565",
+    "glycine max": "3847",
+    "soybean": "3847",
+    "soy": "3847",
+    "brassica napus": "3708",
+    "canola": "3708",
+    "oilseed rape": "3708",
+    "nicotiana tabacum": "4097",
+    "tobacco": "4097",
+    "populus trichocarpa": "3694",
+    "poplar": "3694",
+    "hordeum vulgare": "4513",
+    "barley": "4513",
+    "sorghum bicolor": "4558",
+    "sorghum": "4558",
+    # Reference organisms (MyGene.info accepts these as named strings)
     "human": "human",
+    "homo sapiens": "human",
     "mouse": "mouse",
+    "mus musculus": "mouse",
     "rat": "rat",
     "zebrafish": "zebrafish",
+    "danio rerio": "zebrafish",
     "drosophila": "fly",
     "yeast": "yeast",
+    "saccharomyces cerevisiae": "yeast",
+    # Parasites / other
     "schistosoma mansoni": "6183",
     "fasciola hepatica": "6192",
     "heligmosomoides polygyrus": "6337",
@@ -55,9 +92,9 @@ _MYGENE_SPECIES_MAP = {
 
 
 def _normalize_mygene_species(species: str) -> str:
-    s = (species or "human").strip().lower()
+    s = (species or "arabidopsis thaliana").strip().lower()
     if not s:
-        return "human"
+        return "3702"  # Default to Arabidopsis thaliana taxon ID
     if s.isdigit():
         return s
     if s in _MYGENE_SPECIES_MAP:
@@ -79,13 +116,13 @@ def _normalize_mygene_species(species: str) -> str:
     description="Lookup genes via MyGene.info",
     category="data_api",
     parameters={
-        "query": "Gene symbol/name/identifier (e.g., TP53, ENSG00000141510)",
-        "species": "Species filter (default human)",
+        "query": "Gene symbol/name/identifier (e.g., FLC, AT1G01010, ENSG00000141510)",
+        "species": "Species filter (default: Arabidopsis thaliana). e.g. 'rice', 'maize', 'human'",
         "size": "Maximum hits (default 10)",
     },
-    usage_guide="Use for rapid gene identifier normalization and annotation via MyGene.info.",
+    usage_guide="Use for rapid gene identifier normalization and annotation via MyGene.info across plant species.",
 )
-def mygene_lookup(query: str, species: str = "human", size: int = 10, **kwargs) -> dict:
+def mygene_lookup(query: str, species: str = "Arabidopsis thaliana", size: int = 10, **kwargs) -> dict:
     """Query MyGene.info for gene-level metadata."""
     q = (query or "").strip()
     if not q:

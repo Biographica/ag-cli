@@ -750,19 +750,33 @@ def _entry_relevance_score(
     description="Look up comprehensive protein information from UniProt by gene symbol, UniProt ID, or protein name",
     category="data_api",
     parameters={
-        "query": "Gene symbol, UniProt accession (e.g. P04637), or protein name",
-        "organism": "Organism filter: common name (human/mouse/...), taxonomy ID, or 'any' (default 'human')",
+        "query": "Gene symbol, UniProt accession (e.g. Q9FMD1), or protein name",
+        "organism": "Organism filter: common name (arabidopsis/rice/maize/...), taxonomy ID, or 'any' (default: Arabidopsis thaliana)",
     },
     requires_data=[],
-    usage_guide="You need detailed protein information: function, domains, subcellular location, GO terms, PDB structures, disease involvement, tissue specificity. Comprehensive UniProt protein profile.",
+    usage_guide="Look up detailed protein information from UniProt. Use for gene function, domains, subcellular location, GO terms, ortholog accessions, and cross-species comparisons in plant biology.",
 )
-def uniprot_lookup(query: str, organism: str = "human", **kwargs) -> dict:
+def uniprot_lookup(query: str, organism: str = "Arabidopsis thaliana", **kwargs) -> dict:
     """Look up comprehensive protein data from UniProt REST API."""
+    from ct.tools._species import resolve_species_taxon
     organism_ids = {
-        "human": 9606, "mouse": 10090, "rat": 10116,
-        "zebrafish": 7955, "drosophila": 7227, "yeast": 559292,
+        # Plant species
+        "arabidopsis thaliana": 3702, "arabidopsis": 3702, "at": 3702,
+        "oryza sativa": 4530, "rice": 4530, "os": 4530,
+        "zea mays": 4577, "maize": 4577, "corn": 4577, "zm": 4577,
+        "solanum lycopersicum": 4081, "tomato": 4081,
+        "solanum tuberosum": 4113, "potato": 4113,
+        "triticum aestivum": 4565, "wheat": 4565,
+        "glycine max": 3847, "soybean": 3847, "soy": 3847,
+        "brassica napus": 3708, "canola": 3708, "oilseed rape": 3708,
+        "nicotiana tabacum": 4097, "tobacco": 4097,
+        "populus trichocarpa": 3694, "poplar": 3694,
+        # Cross-species reference organisms
+        "human": 9606, "homo sapiens": 9606,
+        "mouse": 10090, "mus musculus": 10090,
+        "rat": 10116, "zebrafish": 7955, "drosophila": 7227, "yeast": 559292,
     }
-    organism_clean = (organism or "human").strip()
+    organism_clean = (organism or "Arabidopsis thaliana").strip()
     organism_lc = organism_clean.lower()
 
     org_clause = None
@@ -776,8 +790,8 @@ def uniprot_lookup(query: str, organism: str = "human", **kwargs) -> dict:
             if escaped:
                 org_clause = f'organism_name:"{escaped}"'
 
-    # If caller left default "human" but query clearly targets non-human organisms
-    # (e.g., helminth parasite proteins), do not force a human-only filter.
+    # If caller explicitly passed "human" but query targets other organisms,
+    # relax the species filter to avoid missing results.
     if organism_lc == "human" and _query_has_non_human_hints(query):
         org_clause = None
 
@@ -1275,22 +1289,19 @@ def _fetch_pdb_entry(pdb_id: str) -> dict:
     description="Look up gene information from Ensembl: genomic coordinates, transcripts, cross-references",
     category="data_api",
     parameters={
-        "gene": "Gene symbol (e.g. BRCA1) or Ensembl ID (e.g. ENSG00000012048)",
-        "species": "Species name (default 'human')",
+        "gene": "Gene symbol (e.g. AT1G01010, FLC) or Ensembl ID (e.g. AT1G01010)",
+        "species": "Species name or taxon ID (default: Arabidopsis thaliana). e.g. 'rice', 'maize', 'human'",
     },
     requires_data=[],
-    usage_guide="You need gene-level genomic information: Ensembl ID, chromosome location, transcripts, biotype, cross-references. Use for gene annotation and ID mapping.",
+    usage_guide="You need gene-level genomic information: Ensembl ID, chromosome location, transcripts, biotype, cross-references. Use for gene annotation and ID mapping across plant species.",
 )
-def ensembl_lookup(gene: str, species: str = "human", **kwargs) -> dict:
+def ensembl_lookup(gene: str, species: str = "Arabidopsis thaliana", **kwargs) -> dict:
     """Look up gene information from the Ensembl REST API."""
+    from ct.tools._species import resolve_species_ensembl_name
     ensembl_base = "https://rest.ensembl.org"
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
-    species_map = {
-        "human": "homo_sapiens", "mouse": "mus_musculus", "rat": "rattus_norvegicus",
-        "zebrafish": "danio_rerio", "drosophila": "drosophila_melanogaster",
-    }
-    species_name = species_map.get(species.lower(), species.lower().replace(" ", "_"))
+    species_name = resolve_species_ensembl_name(species)
 
     gene_clean = gene.strip()
 

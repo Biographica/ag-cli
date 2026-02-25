@@ -48,21 +48,24 @@ def _coerce_gene_list(value) -> list[str]:
     description="Analyze protein-protein interaction network for a gene using STRING database",
     category="network",
     parameters={
-        "gene": "Gene symbol or comma-separated list (e.g. 'CRBN' or 'CRBN,DDB1,CUL4A')",
+        "gene": "Gene symbol or comma-separated list (e.g. 'AT1G01010' or 'FLC,FT,SOC1')",
         "min_score": "Minimum interaction confidence score 0-1 (default 0.4 = medium)",
         "network_depth": "1=direct partners only, 2=partners of partners (default 1)",
+        "species": "Species name or taxon ID (default: Arabidopsis thaliana). e.g. 'rice', 'maize', 'Oryza sativa'",
     },
-    usage_guide="You want to understand what proteins interact with a target — maps the interaction neighborhood using STRING. Use for target validation, mechanism exploration, and finding co-complex members.",
+    usage_guide="Understand what proteins interact with a plant gene — maps the interaction neighborhood using STRING. Use for target validation, mechanism exploration, and finding co-complex members across plant species.",
 )
-def ppi_analysis(gene: str, min_score: float = 0.4, network_depth: int = 1, **kwargs) -> dict:
+def ppi_analysis(gene: str, min_score: float = 0.4, network_depth: int = 1, species: str = "Arabidopsis thaliana", **kwargs) -> dict:
     """Analyze protein-protein interaction network via STRING API.
 
     Retrieves direct interaction partners and optionally second-shell neighbors.
     Computes network statistics and runs functional enrichment on the interactor set.
     """
+    from ct.tools._species import resolve_species_taxon
     genes = _coerce_gene_list(gene)
     if not genes:
         return {"error": "No gene symbols provided", "summary": "No gene symbols provided"}
+    species_taxon = resolve_species_taxon(species)
     string_score = int(min_score * 1000)  # STRING uses 0-1000 scale
     base = "https://string-db.org/api/json"
 
@@ -72,9 +75,9 @@ def ppi_analysis(gene: str, min_score: float = 0.4, network_depth: int = 1, **kw
         f"{base}/network",
         params={
             "identifiers": "\r".join(genes),
-            "species": 9606,
+            "species": species_taxon,
             "required_score": string_score,
-            "caller_identity": "ct-celltype",
+            "caller_identity": "ag-cli",
         },
         timeout=15,
         retries=2,
@@ -131,9 +134,9 @@ def ppi_analysis(gene: str, min_score: float = 0.4, network_depth: int = 1, **kw
                 f"{base}/network",
                 params={
                     "identifiers": "\r".join(expand_genes),
-                    "species": 9606,
+                    "species": species_taxon,
                     "required_score": string_score,
-                    "caller_identity": "ct-celltype",
+                    "caller_identity": "ag-cli",
                 },
                 timeout=15,
                 retries=2,
@@ -212,8 +215,8 @@ def ppi_analysis(gene: str, min_score: float = 0.4, network_depth: int = 1, **kw
             f"{base}/enrichment",
             params={
                 "identifiers": "\r".join(interactor_genes),
-                "species": 9606,
-                "caller_identity": "ct-celltype",
+                "species": species_taxon,
+                "caller_identity": "ag-cli",
             },
             timeout=15,
             retries=2,

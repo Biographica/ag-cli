@@ -118,21 +118,24 @@ def embed(sequence: str, model: str = "esm2", **kwargs) -> dict:
 
 @registry.register(
     name="protein.function_predict",
-    description="Predict protein function, localization, domains, PTMs, and disease associations from UniProt",
+    description="Predict protein function, localization, domains, PTMs, and GO terms from UniProt",
     category="protein",
     parameters={
-        "gene": "Gene symbol (e.g. BRCA1) or UniProt ID (e.g. P38398)",
+        "gene": "Gene symbol (e.g. FLC, AT1G01010) or UniProt ID (e.g. Q9FMD1)",
         "sequence": "Amino acid sequence (optional, used for basic analysis if API fails)",
+        "species": "Species name or taxon ID (default: Arabidopsis thaliana). e.g. 'rice', 'maize', 'human'",
     },
-    usage_guide="You need comprehensive protein function information — GO terms, subcellular location, domains, PTMs, disease associations, and tissue specificity. Use for target characterization and understanding protein biology.",
+    usage_guide="Look up comprehensive protein function from UniProt — GO terms, subcellular location, domains, PTMs, and tissue specificity. Use for characterizing plant genes and cross-species ortholog comparisons.",
 )
-def function_predict(gene: str, sequence: str = None, **kwargs) -> dict:
+def function_predict(gene: str, sequence: str = None, species: str = "Arabidopsis thaliana", **kwargs) -> dict:
     """Query UniProt for comprehensive protein function data.
 
-    Searches by gene symbol (human) or UniProt accession. Extracts function
-    description, subcellular location, GO terms, domains, post-translational
-    modifications, disease associations, and tissue specificity.
+    Searches by gene symbol (plant default: Arabidopsis thaliana) or UniProt accession.
+    Extracts function description, subcellular location, GO terms, domains,
+    post-translational modifications, and tissue specificity.
     """
+    from ct.tools._species import resolve_species_taxon
+    species_taxon = resolve_species_taxon(species)
     # Determine if input is UniProt ID or gene symbol
     is_uniprot_id = (
         len(gene) == 6
@@ -164,7 +167,7 @@ def function_predict(gene: str, sequence: str = None, **kwargs) -> dict:
             "GET",
             "https://rest.uniprot.org/uniprotkb/search",
             params={
-                "query": f"{gene} AND organism_id:9606",
+                "query": f"{gene} AND organism_id:{species_taxon}",
                 "format": "json",
                 "size": "1",
             },
@@ -186,8 +189,8 @@ def function_predict(gene: str, sequence: str = None, **kwargs) -> dict:
         results = data.get("results", [])
         if not results:
             return {
-                "error": f"No UniProt entry found for gene {gene} in human",
-                "summary": f"Gene {gene} not found in UniProt (human)",
+                "error": f"No UniProt entry found for gene {gene} in {species}",
+                "summary": f"Gene {gene} not found in UniProt ({species})",
             }
         entry = results[0]
 
@@ -339,17 +342,21 @@ def function_predict(gene: str, sequence: str = None, **kwargs) -> dict:
     description="Annotate protein domains, families, and functional sites using InterPro",
     category="protein",
     parameters={
-        "gene": "Gene symbol (e.g. TP53) or domain/family keyword (e.g. CAP superfamily)",
-        "uniprot_id": "UniProt accession (e.g. P04637) — used directly if provided",
+        "gene": "Gene symbol (e.g. FLC, AT1G01010) or domain/family keyword (e.g. MADS-box)",
+        "uniprot_id": "UniProt accession (e.g. Q9FMD1) — used directly if provided",
+        "species": "Species name or taxon ID (default: Arabidopsis thaliana). e.g. 'rice', 'maize', 'human'",
     },
-    usage_guide="You need detailed domain architecture for a protein — domain boundaries, family classifications, active sites, binding sites. Can also search InterPro by domain/family keyword when no UniProt accession can be resolved.",
+    usage_guide="Annotate domain architecture for a plant protein — domain boundaries, family classifications, active sites, binding sites. Can also search InterPro by domain/family keyword (e.g. 'MADS-box', 'LRR').",
 )
-def domain_annotate(gene: str = None, uniprot_id: str = None, **kwargs) -> dict:
+def domain_annotate(gene: str = None, uniprot_id: str = None, species: str = "Arabidopsis thaliana", **kwargs) -> dict:
     """Annotate domains using InterPro API.
 
     Resolves gene to UniProt ID if needed, then queries InterPro for full
     domain architecture including Pfam, SMART, PROSITE, and other member databases.
     """
+    from ct.tools._species import resolve_species_taxon
+    species_taxon = resolve_species_taxon(species)
+
     if not gene and not uniprot_id:
         return {
             "error": "Provide either gene symbol or uniprot_id",
@@ -373,7 +380,7 @@ def domain_annotate(gene: str = None, uniprot_id: str = None, **kwargs) -> dict:
         else:
             search_terms.extend(
                 [
-                    f"{gene_query} AND organism_id:9606",
+                    f"{gene_query} AND organism_id:{species_taxon}",
                     gene_query,
                 ]
             )
