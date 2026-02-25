@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 02-data-infrastructure
 source: [02-01-SUMMARY.md, 02-02-SUMMARY.md, 02-03-SUMMARY.md]
 started: 2026-02-25T12:00:00Z
@@ -59,17 +59,33 @@ skipped: 0
   reason: "User reported: genome_build assumes a single fixed build per species — poor assumption for a field with multiple genome builds per species, pan-genomes, and custom assemblies. Should clarify use cases and note pangenome support as desirable"
   severity: minor
   test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "genome_build field is a single string per species with no documentation that it represents the primary reference build, not an exhaustive inventory. No acknowledgment of pangenomes or multi-assembly reality."
+  artifacts:
+    - path: "src/ct/data/species_registry.yaml"
+      issue: "Schema comment lacks clarification that genome_build is primary reference build only"
+    - path: "src/ct/tools/_species.py"
+      issue: "resolve_species_genome_build docstring does not clarify it returns primary reference build"
+  missing:
+    - "Update YAML schema comment to note genome_build is primary reference assembly for API calls"
+    - "Add docstring clarification to resolve_species_genome_build"
+    - "Add note about pangenome support as future extension"
 
 - truth: "Unknown species resolution returns a meaningful unknown indicator rather than defaulting to Arabidopsis"
   status: failed
   reason: "User reported: default taxon should not be arabidopsis — an unknown species should return unknown, not silently assume arabidopsis. otherwise the agent could assume a random plant is arabidopsis"
   severity: major
   test: 4
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "_DEFAULT_TAXON=3702 and _DEFAULT_BINOMIAL='Arabidopsis thaliana' cause all unknown species to silently resolve as Arabidopsis. Callers cannot distinguish 'user passed Arabidopsis' from 'species was unknown'. Defaults should be 0/empty string."
+  artifacts:
+    - path: "src/ct/tools/_species.py"
+      issue: "_DEFAULT_TAXON=3702 and _DEFAULT_BINOMIAL='Arabidopsis thaliana' silently assume Arabidopsis for unknowns"
+    - path: "tests/test_species.py"
+      issue: "test_resolve_species_taxon_unknown_returns_default asserts 3702, needs to assert 0"
+    - path: "src/ct/tools/parity.py"
+      issue: "_normalize_mygene_species coerces None/empty to 'arabidopsis thaliana' — same anti-pattern"
+  missing:
+    - "Change _DEFAULT_TAXON to 0 and _DEFAULT_BINOMIAL to empty string"
+    - "Change resolve_species_ensembl_name default from 'arabidopsis_thaliana' to empty string"
+    - "Update tests to expect 0/empty for unknown species"
+    - "Add guards in callers (network.py, protein.py, data_api.py) to handle 0 taxon gracefully"
+    - "Fix parity.py _normalize_mygene_species to not coerce empty to Arabidopsis"
