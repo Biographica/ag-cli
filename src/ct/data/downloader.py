@@ -81,6 +81,21 @@ DATASETS = {
         "auto_download": False,
         "note": "Structures are fetched on-demand by structure.alphafold_fetch tool.",
     },
+    "plantexp": {
+        "description": "PlantExp tissue expression atlas (Arabidopsis, rice, maize, wheat, soybean, tomato)",
+        "files": {
+            "expression_matrix.parquet": None,
+            "sample_metadata.csv": None,
+            "manifest.yaml": None,
+        },
+        "source": "https://plantexp.org",
+        "auto_download": False,
+        "note": (
+            "PlantExp download URLs pending confirmation. "
+            "Place expression_matrix.parquet and manifest.yaml in ~/.ct/data/plantexp/"
+        ),
+        "size_hint": "TBD",
+    },
 }
 
 

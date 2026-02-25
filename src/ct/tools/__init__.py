@@ -38,6 +38,7 @@ PLANT_SCIENCE_CATEGORIES = frozenset({
     "remote_data",
     "experiment",
     "parity",
+    "data",
 })
 _TOOL_MODULES = (
     "target",
@@ -79,6 +80,7 @@ _TOOL_MODULES = (
     "cellxgene",
     "clue",
     "remote_data",
+    "plant_data",
 )
 
 
