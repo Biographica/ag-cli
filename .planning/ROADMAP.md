@@ -15,7 +15,7 @@ Milestone 2 (Shortlisting Pipeline Framework) is v2 scope and not represented he
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Fork setup, plant system prompt, runtime pharma tool filtering, and rebranding (completed 2026-02-25)
-- [ ] **Phase 2: Data Infrastructure** - Local-first data loader pattern, species registry, manifest system, organism validation (gap closure in progress)
+- [x] **Phase 2: Data Infrastructure** - Local-first data loader pattern, species registry, manifest system, organism validation (gap closure in progress) (completed 2026-02-25)
 - [ ] **Phase 3: External Connectors** - STRING, PubMed, and Lens.org API connectors with plant-specific query construction
 - [ ] **Phase 4: Plant Genomics Tools** - Gene annotation, ortholog mapping, co-expression analysis, GFF parsing, GWAS/QTL lookup
 - [ ] **Phase 5: Gene Editing and Evidence Tools** - CRISPR guide design, editability scoring, paralogy scoring, multi-species evidence gathering
@@ -110,7 +110,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete    | 2026-02-25 |
-| 2. Data Infrastructure | 3/4 | Gap closure | - |
+| 2. Data Infrastructure | 4/4 | Complete   | 2026-02-25 |
 | 3. External Connectors | 0/3 | Not started | - |
 | 4. Plant Genomics Tools | 0/3 | Not started | - |
 | 5. Gene Editing and Evidence Tools | 0/3 | Not started | - |

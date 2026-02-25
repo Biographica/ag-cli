@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-25T21:39:50.279Z"
+last_updated: "2026-02-25T22:24:59.655Z"
 progress:
   total_phases: 2
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 6
+  completed_plans: 6
 ---
 
 # Project State
@@ -23,17 +23,17 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 2 of 5 (Data Infrastructure)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-25 — Plan 02-03 complete (data.list_datasets + data.load_expression tools + 12 tests)
+Plan: 4 of 4 in current phase (PHASE COMPLETE)
+Status: Phase 2 complete
+Last activity: 2026-02-25 — Plan 02-04 complete (gap closure: unknown-species sentinel 0/'' + caller guards in network.py/protein.py)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 21 min
+- Total plans completed: 5
+- Average duration: 17 min
 - Total execution time: 1.4 hours
 
 **By Phase:**
@@ -41,10 +41,10 @@ Progress: [█████░░░░░] 50%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 2 | 71 min | 36 min |
-| 02-data-infrastructure | 3 | 15 min | 5 min |
+| 02-data-infrastructure | 4 | 16 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (11 min), 01-02 (60 min), 02-01 (3 min), 02-02 (2 min), 02-03 (10 min)
+- Last 5 plans: 01-02 (60 min), 02-01 (3 min), 02-02 (2 min), 02-03 (10 min), 02-04 (1 min)
 - Trend: —
 
 *Updated after each plan completion*
@@ -72,6 +72,8 @@ Recent decisions affecting current work:
 - Rice subspecies (japonica/indica) handled as common_names aliases in species_registry.yaml — simpler than a separate subspecies_taxon_ids field
 - load_manifest tries YAML first, JSON as fallback; never raises on missing files — registry is a convenience, not a gatekeeper
 - Sentinel default string used in resolve_species_binomial to reliably detect unknown species — avoids false negative when arabidopsis (the standard default) appears in the dataset's covered list
+- [Phase 02-data-infrastructure]: Sentinel 0 / '' for unknown species rather than default Arabidopsis — callers see 0 and surface clear errors
+- [Phase 02-data-infrastructure]: Guards placed at API entry points (network.py, protein.py) not inside _species.py — context-aware error messages close to the failing call
 
 ### Pending Todos
 
@@ -87,5 +89,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 02-03-PLAN.md (plant data tools: data.list_datasets + data.load_expression)
+Stopped at: Completed 02-04-PLAN.md (gap closure: unknown-species sentinel fix + caller guards)
 Resume file: None
