@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Plant science system prompt and category allowlist filtering (FOUN-01, FOUN-02)
-- [ ] 01-02-PLAN.md — Species-agnostic architecture and CLI rebranding (FOUN-03, FOUN-04)
+- [x] 01-02-PLAN.md — Species-agnostic architecture and CLI rebranding (FOUN-03, FOUN-04)
 
 ### Phase 2: Data Infrastructure
 **Goal**: The agent can access and explore local curated plant datasets through a versioned manifest system with programmatic organism validation on every data access
@@ -46,12 +46,12 @@ Plans:
   2. A manifest file exists for each data folder describing available datasets, species covered, schema, and content hash; the agent reads the manifest to discover what data is available before loading files
   3. A tool call specifying `species="arabidopsis_thaliana"` on a dataset containing only rice data returns an organism validation error, not silently mismatched results
   4. `ag species list` (or equivalent) returns a registry of supported species with taxon ID, common name, and genome build
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Species registry and manifest pattern
-- [ ] 02-02: Organism validation middleware
-- [ ] 02-03: PlantExp, Ensembl Plants, TAIR, Gramene, STRING local loaders
+- [ ] 02-01-PLAN.md — Species registry YAML, manifest loader, ag species list CLI command (DATA-02, DATA-04)
+- [ ] 02-02-PLAN.md — Organism validation middleware (@validate_species decorator) (DATA-03)
+- [ ] 02-03-PLAN.md — Plant data tools (data.list_datasets, data.load_expression) and downloader entry (DATA-01)
 
 ### Phase 3: External Connectors
 **Goal**: The agent can query STRING plant PPI networks, search PubMed with plant-specific queries, and retrieve patent data from Lens.org as evidence sources in a research workflow
