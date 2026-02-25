@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Plant science system prompt and category allowlist filtering (FOUN-01, FOUN-02)
+- [x] 01-01-PLAN.md — Plant science system prompt and category allowlist filtering (FOUN-01, FOUN-02)
 - [ ] 01-02-PLAN.md — Species-agnostic architecture and CLI rebranding (FOUN-03, FOUN-04)
 
 ### Phase 2: Data Infrastructure
@@ -108,7 +108,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Not started | - |
+| 1. Foundation | 1/2 | In progress | - |
 | 2. Data Infrastructure | 0/3 | Not started | - |
 | 3. External Connectors | 0/3 | Not started | - |
 | 4. Plant Genomics Tools | 0/3 | Not started | - |

@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 1 of 5 (Foundation)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-25 — Roadmap created, ready to begin Phase 1 planning
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-25 — Plan 01-01 complete (system prompt + tool filtering)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 10%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 11 min
+- Total execution time: 0.18 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-foundation | 1 | 11 min | 11 min |
 
 **Recent Trend:**
-- Last 5 plans: —
+- Last 5 plans: 01-01 (11 min)
 - Trend: —
 
 *Updated after each plan completion*
@@ -46,6 +46,10 @@ Recent decisions affecting current work:
 - Runtime tool filtering rather than deletion — keeps optionality for cross-domain use
 - Species-agnostic architecture from day one — explicit `species` parameter on all tools
 - Local-first data access — avoids API throttling, enables curation
+- AGENT_NAME = "Harvest" as single module-level constant in system_prompt.py — trivially swappable
+- Allowlist approach (PLANT_SCIENCE_CATEGORIES frozenset) for tool filtering — safer than blocklist; unknown future categories default hidden
+- Hard invisible tool filtering at MCP layer — agent never wastes turns on pharma tools
+- Pharma workflow injection disabled in build_system_prompt() — avoids domain contamination; plant workflows deferred to later phase
 
 ### Pending Todos
 
@@ -61,5 +65,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Roadmap created — Phase 1 ready to plan
+Stopped at: Completed 01-01-PLAN.md (system prompt + tool filtering)
 Resume file: None
