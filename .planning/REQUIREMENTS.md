@@ -96,32 +96,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUN-01 | — | Pending |
-| FOUN-02 | — | Pending |
-| FOUN-03 | — | Pending |
-| FOUN-04 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| CONN-01 | — | Pending |
-| CONN-02 | — | Pending |
-| CONN-03 | — | Pending |
-| TOOL-01 | — | Pending |
-| TOOL-02 | — | Pending |
-| TOOL-03 | — | Pending |
-| TOOL-04 | — | Pending |
-| TOOL-05 | — | Pending |
-| TOOL-06 | — | Pending |
-| TOOL-07 | — | Pending |
-| TOOL-08 | — | Pending |
-| TOOL-09 | — | Pending |
+| FOUN-01 | Phase 1 | Pending |
+| FOUN-02 | Phase 1 | Pending |
+| FOUN-03 | Phase 1 | Pending |
+| FOUN-04 | Phase 1 | Pending |
+| DATA-01 | Phase 2 | Pending |
+| DATA-02 | Phase 2 | Pending |
+| DATA-03 | Phase 2 | Pending |
+| DATA-04 | Phase 2 | Pending |
+| CONN-01 | Phase 3 | Pending |
+| CONN-02 | Phase 3 | Pending |
+| CONN-03 | Phase 3 | Pending |
+| TOOL-01 | Phase 4 | Pending |
+| TOOL-02 | Phase 4 | Pending |
+| TOOL-03 | Phase 4 | Pending |
+| TOOL-04 | Phase 4 | Pending |
+| TOOL-05 | Phase 4 | Pending |
+| TOOL-06 | Phase 5 | Pending |
+| TOOL-07 | Phase 5 | Pending |
+| TOOL-08 | Phase 5 | Pending |
+| TOOL-09 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️
+- Mapped to phases: 20
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after initial definition*
+*Last updated: 2026-02-25 after roadmap creation*

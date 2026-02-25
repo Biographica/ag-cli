@@ -142,6 +142,9 @@ src/
 | Species-agnostic from day one | Avoids costly refactoring later; real customers work across crop species | — Pending |
 | Pseudo-Bayesian evidence integration (from product spec) | Balances interpretability, configurability, and robustness; avoids intractable probabilistic models | — Pending |
 | Scoring as deterministic code, not agent judgement | Prevents hallucination in quantitative outputs; agent plans the pipeline, code executes it | — Pending |
+| Data loaders read from local curated folders, not download/clean | Dagster backend handles data curation; ag-cli loaders just read from local folders with manifests | — Pending |
+| Multi-species tool signatures supported | Comparative genomics tools take source_species + target_species (or lists); single-species tools take species; species-agnostic tools make species optional. "No hardcoded species" is the constraint, not "every tool takes exactly one species" | — Pending |
+| Engine API must support meta-prompting layers | ag-cli's tool registry, agent runner, and MCP server are public interfaces. Future workflow frameworks (shortlisting, field trial design, etc.) can register skills (/shortlist:plan, etc.) on top of ag-cli the same way GSD layers on Claude Code | — Pending |
 
 ---
-*Last updated: 2025-02-25 after initialization*
+*Last updated: 2026-02-25 after roadmap creation*
