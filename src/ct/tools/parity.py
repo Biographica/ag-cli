@@ -92,9 +92,9 @@ _MYGENE_SPECIES_MAP = {
 
 
 def _normalize_mygene_species(species: str) -> str:
-    s = (species or "arabidopsis thaliana").strip().lower()
+    s = (species or "").strip().lower()
     if not s:
-        return "3702"  # Default to Arabidopsis thaliana taxon ID
+        return s  # Empty string — let the caller or API handle missing species
     if s.isdigit():
         return s
     if s in _MYGENE_SPECIES_MAP:

@@ -136,6 +136,11 @@ def function_predict(gene: str, sequence: str = None, species: str = "Arabidopsi
     """
     from ct.tools._species import resolve_species_taxon
     species_taxon = resolve_species_taxon(species)
+    if species_taxon == 0:
+        return {
+            "error": f"Unknown species: {species!r}. Use 'ag species list' to see supported species.",
+            "summary": f"Species not recognised: {species!r}. Cannot query UniProt without a valid taxon ID.",
+        }
     # Determine if input is UniProt ID or gene symbol
     is_uniprot_id = (
         len(gene) == 6
@@ -356,6 +361,11 @@ def domain_annotate(gene: str = None, uniprot_id: str = None, species: str = "Ar
     """
     from ct.tools._species import resolve_species_taxon
     species_taxon = resolve_species_taxon(species)
+    if species_taxon == 0:
+        return {
+            "error": f"Unknown species: {species!r}. Use 'ag species list' to see supported species.",
+            "summary": f"Species not recognised: {species!r}. Cannot query InterPro without a valid taxon ID.",
+        }
 
     if not gene and not uniprot_id:
         return {

@@ -66,6 +66,11 @@ def ppi_analysis(gene: str, min_score: float = 0.4, network_depth: int = 1, spec
     if not genes:
         return {"error": "No gene symbols provided", "summary": "No gene symbols provided"}
     species_taxon = resolve_species_taxon(species)
+    if species_taxon == 0:
+        return {
+            "error": f"Unknown species: {species!r}. Use 'ag species list' to see supported species.",
+            "summary": f"Species not recognised: {species!r}. Cannot query STRING without a valid taxon ID.",
+        }
     string_score = int(min_score * 1000)  # STRING uses 0-1000 scale
     base = "https://string-db.org/api/json"
 

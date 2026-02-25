@@ -145,7 +145,7 @@ def test_resolve_species_taxon_by_binomial():
 
 
 def test_resolve_species_taxon_unknown_returns_default():
-    """Unknown species name returns the default taxon (3702)."""
+    """Unknown species name returns 0 (not found), not a default species."""
     import ct.tools._species as mod
 
     mod._load_registry.cache_clear()
@@ -155,7 +155,7 @@ def test_resolve_species_taxon_unknown_returns_default():
         mod._build_lookup.cache_clear()
         result = mod.resolve_species_taxon("unknown_plant")
 
-    assert result == 3702
+    assert result == 0
 
 
 def test_resolve_species_taxon_numeric_passthrough():
@@ -261,7 +261,7 @@ def test_rice_subspecies_resolve():
         mod._build_lookup.cache_clear()
         result = mod.resolve_species_taxon("oryza sativa japonica")
 
-    # Must resolve to something (4530 or 39947), NOT the default 3702
+    # Must resolve to a real taxon (4530 or 39947), NOT the unknown sentinel 0
     assert result in (4530, 39947), (
         f"Expected 4530 or 39947, got {result} — subspecies lookup failed"
     )
