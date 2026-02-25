@@ -291,6 +291,33 @@ def data_status():
     console.print(dataset_status())
 
 
+# ─── Species subcommand ────────────────────────────────────────
+
+species_app = typer.Typer(help="Species registry management")
+app.add_typer(species_app, name="species")
+
+
+@species_app.command("list")
+def species_list():
+    """Display all species in the registry with binomial name, taxon ID, common names, and genome build."""
+    from ct.tools._species import list_all_species
+
+    table = Table(title="Supported Species Registry")
+    table.add_column("Binomial Name", style="cyan", no_wrap=True)
+    table.add_column("Taxon ID")
+    table.add_column("Common Names")
+    table.add_column("Genome Build")
+
+    for entry in list_all_species():
+        binomial = entry.get("binomial", "")
+        taxon_id = str(entry.get("taxon_id", ""))
+        common_names = ", ".join(entry.get("common_names", []))
+        genome_build = entry.get("genome_build", "") or ""
+        table.add_row(binomial, taxon_id, common_names, genome_build)
+
+    console.print(table)
+
+
 # ─── Tool subcommands (direct tool access) ────────────────────
 
 tool_app = typer.Typer(help="Run individual tools directly")
