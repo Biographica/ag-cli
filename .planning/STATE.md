@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 1 of 5 (Foundation)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-25 — Plan 01-01 complete (system prompt + tool filtering)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-25 — Plan 01-02 complete (species resolution + CLI rebrand)
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 11 min
-- Total execution time: 0.18 hours
+- Total plans completed: 2
+- Average duration: 36 min
+- Total execution time: 1.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 1 | 11 min | 11 min |
+| 01-foundation | 2 | 71 min | 36 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (11 min)
+- Last 5 plans: 01-01 (11 min), 01-02 (60 min)
 - Trend: —
 
 *Updated after each plan completion*
@@ -50,6 +50,11 @@ Recent decisions affecting current work:
 - Allowlist approach (PLANT_SCIENCE_CATEGORIES frozenset) for tool filtering — safer than blocklist; unknown future categories default hidden
 - Hard invisible tool filtering at MCP layer — agent never wastes turns on pharma tools
 - Pharma workflow injection disabled in build_system_prompt() — avoids domain contamination; plant workflows deferred to later phase
+- Arabidopsis thaliana (3702) as default species across all tools — it is the model plant organism, analogous to human being the original default
+- ct Python namespace retained unchanged — only the installed CLI script changes to ag via pyproject.toml scripts
+- resolve_species_binomial returns exact stored casing not .title() — avoids breaking Ensembl URL construction
+- MyGene.info plant species use numeric taxon ID strings ('3702') not named strings — API only supports named strings for human/mouse
+- genomics.py coloc function left with homo_sapiens reference — Open Targets Platform is human-only API, not parameterizable
 
 ### Pending Todos
 
@@ -65,5 +70,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 01-01-PLAN.md (system prompt + tool filtering)
+Stopped at: Completed 01-02-PLAN.md (species resolution + CLI rebrand to ag-cli/Harvest)
 Resume file: None

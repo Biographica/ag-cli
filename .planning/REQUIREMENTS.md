@@ -11,8 +11,8 @@ Requirements for Milestone 1: Working Plant Science Agent.
 
 - [x] **FOUN-01**: Agent uses plant science system prompt replacing all oncology domain knowledge
 - [x] **FOUN-02**: Runtime domain-based tool filtering hides pharma-specific tools (chemistry, clinical, safety, CRO, viability, combination, structure, biomarker, PK) from the agent
-- [ ] **FOUN-03**: Species-agnostic architecture — no hardcoded species; species passed as parameter to all tools
-- [ ] **FOUN-04**: CLI and pyproject.toml rebranded from celltype-cli to ag-cli
+- [x] **FOUN-03**: Species-agnostic architecture — no hardcoded species; species passed as parameter to all tools
+- [x] **FOUN-04**: CLI and pyproject.toml rebranded from celltype-cli to ag-cli
 
 ### Data Access
 
@@ -98,8 +98,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | FOUN-01 | Phase 1 | Complete (01-01) |
 | FOUN-02 | Phase 1 | Complete (01-01) |
-| FOUN-03 | Phase 1 | Pending |
-| FOUN-04 | Phase 1 | Pending |
+| FOUN-03 | Phase 1 | Complete |
+| FOUN-04 | Phase 1 | Complete |
 | DATA-01 | Phase 2 | Pending |
 | DATA-02 | Phase 2 | Pending |
 | DATA-03 | Phase 2 | Pending |
