@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 2 of 5 (Data Infrastructure)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-25 — Plan 02-01 complete (species registry YAML + manifest loader)
+Last activity: 2026-02-25 — Plan 02-02 complete (@validate_species decorator + 10 validation tests)
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 36 min
-- Total execution time: 1.1 hours
+- Total plans completed: 3
+- Average duration: 25 min
+- Total execution time: 1.2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 2 | 71 min | 36 min |
-| 02-data-infrastructure | 1 | 3 min | 3 min |
+| 02-data-infrastructure | 2 | 5 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (11 min), 01-02 (60 min), 02-01 (3 min)
+- Last 5 plans: 01-01 (11 min), 01-02 (60 min), 02-01 (3 min), 02-02 (2 min)
 - Trend: —
 
 *Updated after each plan completion*
@@ -58,6 +58,7 @@ Recent decisions affecting current work:
 - genomics.py coloc function left with homo_sapiens reference — Open Targets Platform is human-only API, not parameterizable
 - Rice subspecies (japonica/indica) handled as common_names aliases in species_registry.yaml — simpler than a separate subspecies_taxon_ids field
 - load_manifest tries YAML first, JSON as fallback; never raises on missing files — registry is a convenience, not a gatekeeper
+- Sentinel default string used in resolve_species_binomial to reliably detect unknown species — avoids false negative when arabidopsis (the standard default) appears in the dataset's covered list
 
 ### Pending Todos
 
@@ -73,5 +74,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 02-01-PLAN.md (species registry YAML + manifest loader + ag species list)
+Stopped at: Completed 02-02-PLAN.md (@validate_species decorator + organism validation middleware)
 Resume file: None

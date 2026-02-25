@@ -109,7 +109,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete    | 2026-02-25 |
-| 2. Data Infrastructure | 1/3 | In Progress|  |
+| 2. Data Infrastructure | 2/3 | In Progress|  |
 | 3. External Connectors | 0/3 | Not started | - |
 | 4. Plant Genomics Tools | 0/3 | Not started | - |
 | 5. Gene Editing and Evidence Tools | 0/3 | Not started | - |
