@@ -1,0 +1,20 @@
+dataset: "PlantExp Expression Atlas (Test Fixture)"
+version: "test-001"
+description: "Synthetic tissue-level gene expression data for testing"
+species_covered:
+  - "Arabidopsis thaliana"
+  - "Oryza sativa"
+files:
+  - name: "expression_matrix.parquet"
+    description: "Gene x sample expression matrix (TPM)"
+    format: "parquet"
+    schema:
+      gene_id: "string - gene identifier"
+      sample_id: "string - sample accession"
+      tpm: "float - TPM expression value"
+      tissue: "string - tissue/organ"
+      species: "string - binomial species name"
+  - name: "sample_metadata.csv"
+    description: "Sample metadata"
+    format: "csv"
+source: "Synthetic test data"
