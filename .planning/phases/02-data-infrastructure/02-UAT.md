@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 02-data-infrastructure
 source: [02-01-SUMMARY.md, 02-02-SUMMARY.md, 02-03-SUMMARY.md]
 started: 2026-02-25T12:00:00Z
-updated: 2026-02-25T12:30:00Z
+updated: 2026-02-25T13:00:00Z
 ---
 
 ## Current Test
@@ -55,7 +55,7 @@ skipped: 0
 ## Gaps
 
 - truth: "Genome build resolution returns a single build per species"
-  status: failed
+  status: resolved
   reason: "User reported: genome_build assumes a single fixed build per species — poor assumption for a field with multiple genome builds per species, pan-genomes, and custom assemblies. Should clarify use cases and note pangenome support as desirable"
   severity: minor
   test: 3
@@ -71,7 +71,7 @@ skipped: 0
     - "Add note about pangenome support as future extension"
 
 - truth: "Unknown species resolution returns a meaningful unknown indicator rather than defaulting to Arabidopsis"
-  status: failed
+  status: resolved
   reason: "User reported: default taxon should not be arabidopsis — an unknown species should return unknown, not silently assume arabidopsis. otherwise the agent could assume a random plant is arabidopsis"
   severity: major
   test: 4
