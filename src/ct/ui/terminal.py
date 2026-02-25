@@ -1,7 +1,7 @@
 """
-Interactive terminal for ct.
+Interactive terminal for Harvest (ag-cli).
 
-Provides a REPL-style interface for continuous research sessions.
+Provides a REPL-style interface for continuous plant science research sessions.
 """
 
 import random
@@ -80,11 +80,13 @@ from ct.ui.suggestions import DEFAULT_SUGGESTIONS
 
 DATASET_CANDIDATES = [
     ("depmap", "dataset", "DepMap CRISPR/model data"),
-    ("prism", "dataset", "PRISM drug sensitivity"),
     ("l1000", "dataset", "L1000 gene expression signatures"),
     ("proteomics", "dataset", "Proteomics log2FC matrix"),
     ("msigdb", "dataset", "MSigDB gene sets"),
     ("string", "dataset", "STRING protein interaction network"),
+    ("gramene", "dataset", "Gramene plant comparative genomics"),
+    ("plaza", "dataset", "PLAZA plant genomics platform"),
+    ("bar", "dataset", "Bio-Analytic Resource for plant expression"),
 ]
 
 KNOWN_DATASETS = frozenset(d[0] for d in DATASET_CANDIDATES)
@@ -1108,7 +1110,7 @@ class InteractiveTerminal:
             ts = time.strftime("%Y%m%d_%H%M%S")
             path = output_dir / f"session_{ts}.md"
 
-        lines = ["# ct Session Export\n"]
+        lines = ["# Harvest Session Export\n"]
         lines.append(f"*Exported {time.strftime('%Y-%m-%d %H:%M')}*\n")
         lines.append(f"*Model: {self._model_display_name()}*\n\n---\n")
 

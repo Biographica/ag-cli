@@ -1,12 +1,11 @@
 """
-ct CLI entry point.
+ag CLI entry point — Harvest, the autonomous plant science research agent.
 
 Usage:
-    ct                              # Interactive mode
-    ct "your question"              # Single query
-    ct --smiles "CCO" "Profile"     # With compound context
-    ct config set key value         # Configuration
-    ct data pull depmap             # Data management
+    ag                              # Interactive mode
+    ag "your question"              # Single query
+    ag config set key value         # Configuration
+    ag data pull depmap             # Data management
 """
 
 import os
@@ -29,23 +28,25 @@ from ct.ui.terminal import InteractiveTerminal
 
 # ─── Startup banner ─────────────────────────────────────────
 BANNER = """
-[bold #50fa7b] ██████╗███████╗██╗     ██╗    ████████╗██╗   ██╗██████╗ ███████╗[/]
-[bold #40f695]██╔════╝██╔════╝██║     ██║    ╚══██╔══╝╚██╗ ██╔╝██╔══██╗██╔════╝[/]
-[bold #30f1b0]██║     █████╗  ██║     ██║       ██║    ╚████╔╝ ██████╔╝█████╗  [/]
-[bold #20edca]██║     ██╔══╝  ██║     ██║       ██║     ╚██╔╝  ██╔═══╝ ██╔══╝  [/]
-[bold #10e9e4]╚██████╗███████╗███████╗███████╗  ██║      ██║   ██║     ███████╗[/]
-[bold #00e5ff] ╚═════╝╚══════╝╚══════╝╚══════╝  ╚═╝      ╚═╝   ╚═╝     ╚══════╝[/]
+[bold #50fa7b]  ██╗  ██╗ █████╗ ██████╗ ██╗   ██╗███████╗███████╗████████╗[/]
+[bold #40f695]  ██║  ██║██╔══██╗██╔══██╗██║   ██║██╔════╝██╔════╝╚══██╔══╝[/]
+[bold #30f1b0]  ███████║███████║██████╔╝██║   ██║█████╗  ███████╗   ██║   [/]
+[bold #20edca]  ██╔══██║██╔══██║██╔══██╗╚██╗ ██╔╝██╔══╝  ╚════██║   ██║   [/]
+[bold #10e9e4]  ██║  ██║██║  ██║██║  ██║ ╚████╔╝ ███████╗███████║   ██║   [/]
+[bold #00e5ff]  ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚══════╝   ╚═╝   [/]
 """
 
 app = typer.Typer(
-    name="ct",
+    name="ag",
     help=(
-        "CellType CLI — An autonomous agent for drug discovery research.\n\n"
+        "ag-cli — An autonomous plant science research agent for genomics,\n"
+        "expression analysis, gene editing assessment, and multi-species\n"
+        "evidence synthesis.\n\n"
         "Common usage:\n"
-        '  ct "your research question"\n'
-        '  ct --smiles "CCO" "Profile this compound"\n'
-        "  ct config show\n"
-        "  ct tool list"
+        '  ag "your research question"\n'
+        '  ag "What genes regulate flowering time in Arabidopsis?"\n'
+        "  ag config show\n"
+        "  ag tool list"
     ),
     no_args_is_help=False,
 )
@@ -53,7 +54,7 @@ console = Console()
 
 # ─── Config subcommand ────────────────────────────────────────
 
-config_app = typer.Typer(help="Manage ct configuration")
+config_app = typer.Typer(help="Manage ag configuration")
 app.add_typer(config_app, name="config")
 
 
@@ -138,10 +139,10 @@ def setup_cmd(
     console.print()
     console.print(
         Panel(
-            "[bold]Welcome to CellType[/bold]\n\n"
-            "This wizard will configure ct for first use.\n"
+            "[bold]Welcome to Harvest[/bold]\n\n"
+            "This wizard will configure ag for first use.\n"
             "You need an Anthropic API key to get started.",
-            title="[cyan]ct setup[/cyan]",
+            title="[cyan]ag setup[/cyan]",
             border_style="cyan",
         )
     )
@@ -203,7 +204,7 @@ def setup_cmd(
     cfg.set("llm.api_key", chosen_key)
     cfg.set("llm.provider", "anthropic")
     cfg.save()
-    console.print("\n  [green]API key saved to ~/.ct/config.json[/green]")
+    console.print("\n  [green]API key saved to ~/.ct/config.json[/green]")  # ~/.ct/ is the config dir
 
     # Quick health check
     console.print()
@@ -214,7 +215,7 @@ def setup_cmd(
 
     if has_errors(checks):
         console.print(
-            "\n  [yellow]Some issues detected.[/yellow] Run `ct doctor` for details."
+            "\n  [yellow]Some issues detected.[/yellow] Run `ag doctor` for details."
         )
     else:
         console.print("\n  [green]All checks passed.[/green]")
@@ -224,10 +225,10 @@ def setup_cmd(
     console.print(
         Panel(
             "[bold green]You're all set![/bold green]\n\n"
-            "  [cyan]ct[/cyan]                      Interactive mode\n"
-            '  [cyan]ct "your question"[/cyan]      Single query\n'
-            "  [cyan]ct doctor[/cyan]               Full health check\n"
-            "  [cyan]ct keys[/cyan]                 Optional API keys",
+            "  [cyan]ag[/cyan]                      Interactive mode\n"
+            '  [cyan]ag "your question"[/cyan]      Single query\n'
+            "  [cyan]ag doctor[/cyan]               Full health check\n"
+            "  [cyan]ag keys[/cyan]                 Optional API keys",
             title="[green]Quick Start[/green]",
             border_style="green",
         )
@@ -260,7 +261,7 @@ def doctor_cmd():
     if has_errors(checks):
         console.print(
             "\n[red]Blocking issues found.[/red] "
-            "Fix errors above, then rerun `ct doctor`."
+            "Fix errors above, then rerun `ag doctor`."
         )
         raise typer.Exit(code=1)
 
@@ -1070,7 +1071,7 @@ def report_notebook(
 
 # ─── Case study subcommands ─────────────────────────────────
 
-case_study_app = typer.Typer(help="Run curated drug case studies")
+case_study_app = typer.Typer(help="Run curated plant science case studies")
 app.add_typer(case_study_app, name="case-study")
 
 
@@ -1101,7 +1102,7 @@ def case_study_run(
     model: Optional[str] = typer.Option(None, "--model", "-m", help="LLM model to use"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
 ):
-    """Run a curated drug case study with multi-agent analysis."""
+    """Run a curated plant science case study with multi-agent analysis."""
     from ct.agent.case_studies import CASE_STUDIES, run_case_study
     from ct.agent.config import Config
     from ct.reports.html import publish_report
@@ -1153,10 +1154,10 @@ def case_study_run(
 
 @app.command("run", hidden=True)
 def run_cmd(
-    query_parts: list[str] = typer.Argument(None, help="Research question to investigate"),
+    query_parts: list[str] = typer.Argument(None, help="Plant science research question"),
     smiles: Optional[str] = typer.Option(None, "--smiles", "-s", help="Compound SMILES string"),
-    target: Optional[str] = typer.Option(None, "--target", "-t", help="Target protein (UniProt ID or gene symbol)"),
-    indication: Optional[str] = typer.Option(None, "--indication", "-i", help="Cancer type / indication"),
+    target: Optional[str] = typer.Option(None, "--target", "-t", help="Target gene/protein (e.g. FLC, AT1G01010)"),
+    indication: Optional[str] = typer.Option(None, "--indication", "-i", help="Trait or phenotype of interest"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output directory for reports"),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="LLM model to use"),
     agents: Optional[int] = typer.Option(None, "--agents", "-a", help="Run with N parallel research agents"),
@@ -1166,13 +1167,18 @@ def run_cmd(
     version: bool = typer.Option(False, "--version", "-V", help="Show version"),
 ):
     """
-    CellType CLI — An autonomous agent for drug discovery research.
+    Harvest — Autonomous plant science research agent.
 
     Run without arguments for interactive mode.
     Pass a question for single-query mode.
+
+    Examples:
+      ag "What are the key regulators of flowering time in rice?"
+      ag "Find orthologs of FLC in Brassica napus and assess CRISPR feasibility"
+      ag "Analyse drought stress expression in maize"
     """
     if version:
-        console.print(f"ct v{__version__}")
+        console.print(f"ag v{__version__}")
         raise typer.Exit()
 
     query = " ".join(query_parts).strip() if query_parts else None
@@ -1227,7 +1233,7 @@ def run_query(query: str, context: dict, output: Optional[Path],
     print_banner()
     console.print(Panel(
         f"[bold]{query}[/bold]",
-        title="[cyan]ct[/cyan]",
+        title="[cyan]Harvest[/cyan]",
         border_style="cyan",
     ))
     console.print()
@@ -1357,28 +1363,30 @@ def bench(
 
 
 def print_banner():
-    """Print the startup banner with molecule illustration."""
-    from ct.tools import registry, ensure_loaded
+    """Print the startup banner with Harvest plant science branding."""
+    from ct.tools import registry, ensure_loaded, PLANT_SCIENCE_CATEGORIES
     from rich.panel import Panel
     from rich.text import Text
     ensure_loaded()
-    n_tools = len(registry.list_tools())
-    
-    # Print the ASCII logo (just the CELLTYPE art)
-    console.print(BANNER) 
-    
-    # Create a nice enclosed dashboard panel for the metadata
+    # Count only plant-science tools (same filter as tool list)
+    all_tools = registry.list_tools()
+    n_tools = len([t for t in all_tools if t.category in PLANT_SCIENCE_CATEGORIES])
+
+    # Print the ASCII logo
+    console.print(BANNER)
+
+    # Create a plant science dashboard panel
     meta_text = Text.from_markup(
-        f"[bold white]Autonomous Drug Discovery Agent[/]\n"
-        f"[dim]v{__version__}  ·  {n_tools} tools loaded  ·  backed by[/dim] [bold white on #f26522] Y [/][bold #f26522] Combinator[/]",
+        f"[bold white]Autonomous Plant Science Research Agent[/]\n"
+        f"[dim]v{__version__}  ·  {n_tools} tools loaded  ·  genomics · expression · gene editing · orthologs[/dim]",
         justify="center"
     )
-    
+
     console.print(Panel(
-        meta_text, 
-        title="[bold cyan]CellType CLI[/]",
+        meta_text,
+        title="[bold #50fa7b]Harvest[/]",
         border_style="dim",
-        width=65
+        width=70
     ))
 
 
@@ -1404,8 +1412,8 @@ def run_interactive(context: dict, output: Optional[Path],
 
     print_banner()
 
-    # Show model info like Claude Code does
-    console.print("  [dim]Type a research question, or /help for commands.[/dim]")
+    # Show interactive mode hint
+    console.print("  [dim]Type a plant science question, or /help for commands.[/dim]")
     console.print()
 
     terminal = InteractiveTerminal(config=cfg, verbose=verbose)
@@ -1436,14 +1444,14 @@ def entry():
     }
 
     # Route plain invocations to hidden `run` command so:
-    #   ct                       -> interactive mode
-    #   ct "question"            -> single-query mode
-    #   ct --smiles ... "q"      -> single-query with context
-    # while preserving explicit subcommands like `ct config ...`.
+    #   ag                       -> interactive mode
+    #   ag "question"            -> single-query mode
+    #   ag --target FLC "q"      -> single-query with context
+    # while preserving explicit subcommands like `ag config ...`.
     if not argv or argv[0] not in passthrough:
         argv = ["run", *argv]
 
-    app(args=argv, prog_name="ct")
+    app(args=argv, prog_name="ag")
 
 
 if __name__ == "__main__":

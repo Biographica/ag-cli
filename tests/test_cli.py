@@ -30,7 +30,7 @@ def test_doctor_subcommand_not_treated_as_query():
         result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 0
-    assert "ct Doctor" in result.stdout
+    assert "ag Doctor" in result.stdout
     mock_run_query.assert_not_called()
 
 
@@ -66,14 +66,14 @@ def test_entry_routes_plain_invocation_to_hidden_run(monkeypatch):
         called["prog_name"] = prog_name
 
     monkeypatch.setattr("ct.cli.app", fake_app)
-    monkeypatch.setattr("sys.argv", ["ct", "profile", "TP53"])
+    monkeypatch.setattr("sys.argv", ["ag", "profile", "FLC"])
 
     from ct.cli import entry
 
     entry()
 
-    assert called["prog_name"] == "ct"
-    assert called["args"] == ["run", "profile", "TP53"]
+    assert called["prog_name"] == "ag"
+    assert called["args"] == ["run", "profile", "FLC"]
 
 
 def test_entry_preserves_explicit_subcommand(monkeypatch):
@@ -84,13 +84,13 @@ def test_entry_preserves_explicit_subcommand(monkeypatch):
         called["prog_name"] = prog_name
 
     monkeypatch.setattr("ct.cli.app", fake_app)
-    monkeypatch.setattr("sys.argv", ["ct", "config", "show"])
+    monkeypatch.setattr("sys.argv", ["ag", "config", "show"])
 
     from ct.cli import entry
 
     entry()
 
-    assert called["prog_name"] == "ct"
+    assert called["prog_name"] == "ag"
     assert called["args"] == ["config", "show"]
 
 
@@ -102,13 +102,13 @@ def test_entry_preserves_trace_subcommand(monkeypatch):
         called["prog_name"] = prog_name
 
     monkeypatch.setattr("ct.cli.app", fake_app)
-    monkeypatch.setattr("sys.argv", ["ct", "trace", "diagnose"])
+    monkeypatch.setattr("sys.argv", ["ag", "trace", "diagnose"])
 
     from ct.cli import entry
 
     entry()
 
-    assert called["prog_name"] == "ct"
+    assert called["prog_name"] == "ag"
     assert called["args"] == ["trace", "diagnose"]
 
 

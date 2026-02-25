@@ -175,7 +175,7 @@ def resolve_species_taxon(species: str, default_taxon: int = _DEFAULT_TAXON) -> 
 
 
 def resolve_species_binomial(species: str, default: str = _DEFAULT_BINOMIAL) -> str:
-    """Resolve a species string to a canonical binomial name (Title Case).
+    """Resolve a species string to a canonical binomial name.
 
     Handles the same input forms as resolve_species_taxon.
 
@@ -185,7 +185,7 @@ def resolve_species_binomial(species: str, default: str = _DEFAULT_BINOMIAL) -> 
             Defaults to 'Arabidopsis thaliana'.
 
     Returns:
-        Canonical binomial name in Title Case (e.g. 'Oryza Sativa').
+        Canonical binomial name as stored in the map (e.g. 'Oryza sativa').
     """
     if not species:
         return default
@@ -195,15 +195,15 @@ def resolve_species_binomial(species: str, default: str = _DEFAULT_BINOMIAL) -> 
     # Numeric taxon ID — reverse lookup
     if s.isdigit():
         taxon_id = int(s)
-        for key, (tid, binomial) in _PLANT_TAXON_MAP.items():
+        for _key, (tid, binomial) in _PLANT_TAXON_MAP.items():
             if tid == taxon_id:
-                return binomial.title()
+                return binomial
         return default
 
     key = " ".join(s.lower().split())
     entry = _PLANT_TAXON_MAP.get(key)
     if entry is not None:
-        return entry[1].title()
+        return entry[1]
 
     return default
 

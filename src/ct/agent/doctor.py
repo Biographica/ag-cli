@@ -280,7 +280,7 @@ def run_checks(config: Config | None = None, session=None) -> list[DoctorCheck]:
                 DoctorCheck(
                     name="schema_monitor",
                     status="warn",
-                    detail="Schema monitor enabled but no baseline found. Run: ct knowledge schema-update",
+                    detail="Schema monitor enabled but no baseline found. Run: ag knowledge schema-update",
                 )
             )
     else:
@@ -350,7 +350,7 @@ def has_errors(checks: list[DoctorCheck]) -> bool:
 
 def to_table(checks: list[DoctorCheck]) -> Table:
     """Render doctor checks as a rich table."""
-    table = Table(title="ct Doctor")
+    table = Table(title="ag Doctor")
     table.add_column("Check", style="cyan")
     table.add_column("Status")
     table.add_column("Details")
@@ -414,12 +414,12 @@ def _check_data_availability(cfg: Config) -> DoctorCheck:
         return DoctorCheck(
             name="data_availability",
             status="warn",
-            detail=f"Missing datasets: {', '.join(sorted(missing))} (found: {', '.join(sorted(found))}). Run: ct data pull <name>",
+            detail=f"Missing datasets: {', '.join(sorted(missing))} (found: {', '.join(sorted(found))}). Run: ag data pull <name>",
         )
     return DoctorCheck(
         name="data_availability",
         status="warn",
-        detail=f"No key datasets found ({', '.join(sorted(missing))}). Run: ct data pull depmap",
+        detail=f"No key datasets found ({', '.join(sorted(missing))}). Run: ag data pull depmap",
     )
 
 
