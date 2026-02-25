@@ -31,11 +31,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Running `ct tool list` shows only plant-relevant and general-purpose tools; pharma-category tools (chemistry, clinical, safety, CRO, viability, combination, structure, biomarker, PK) are absent from the active list
   3. Every tool call accepts `species` as an explicit parameter and no tool has a hardcoded species reference
   4. The CLI command is `ag` (not `ct`) and `ag --version` returns the ag-cli version correctly
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: Plant system prompt and domain filter configuration
-- [ ] 01-02: Species-agnostic architecture enforcement and CLI rebranding
+- [ ] 01-01-PLAN.md — Plant science system prompt and category allowlist filtering (FOUN-01, FOUN-02)
+- [ ] 01-02-PLAN.md — Species-agnostic architecture and CLI rebranding (FOUN-03, FOUN-04)
 
 ### Phase 2: Data Infrastructure
 **Goal**: The agent can access and explore local curated plant datasets through a versioned manifest system with programmatic organism validation on every data access
