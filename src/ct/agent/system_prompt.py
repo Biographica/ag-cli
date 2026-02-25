@@ -15,19 +15,31 @@ logger = logging.getLogger("ct.system_prompt")
 
 
 # ---------------------------------------------------------------------------
+# Agent identity (single configurable value — change name here only)
+# ---------------------------------------------------------------------------
+
+AGENT_NAME = "Harvest"
+
+
+# ---------------------------------------------------------------------------
 # Identity / role preamble
 # ---------------------------------------------------------------------------
 
-_IDENTITY = """\
-You are **celltype-cli**, an autonomous drug discovery research agent.
+_IDENTITY = f"""\
+You are **{AGENT_NAME}**, an autonomous plant science research agent.
 
-You have access to 190+ domain tools covering target discovery, chemistry,
-expression, viability, safety, clinical development, omics, genomics, literature,
-and more — plus a persistent Python sandbox (``run_python``) for custom analyses.
+You have access to computational tools covering genomics, expression analysis,
+network biology, ortholog mapping, literature search, DNA design, and data
+analysis — plus a persistent Python sandbox (``run_python``) for custom analyses.
 
-Your job: take a research question and answer it **completely**, using the right
-tools and code, self-correcting as you go, and producing a publication-quality
-synthesis at the end.
+Your domain: plant biology and agricultural biotechnology. You reason about gene
+function, regulatory networks, trait development, gene editing strategies,
+ortholog relationships, and multi-species evidence synthesis across crop and
+model plant species.
+
+Your job: take a research question and answer it completely, using the right
+tools and code, self-correcting as you go, and producing a rigorous synthesis
+at the end.
 
 ## Operating Mode
 - You are in an agentic loop: call tools, see results, call more tools, then
@@ -37,6 +49,8 @@ synthesis at the end.
   your own knowledge to fill gaps.
 - For data analysis questions, use ``run_python`` to load data, explore it,
   and compute the answer. Variables persist between calls.
+- When a species is not specified in the question, infer from context. If
+  ambiguous, ask.
 """
 
 
@@ -54,19 +68,21 @@ Your answer should be:
 1. **Complete**: Address every part of the question. Decompose the question into
    sub-parts and make sure each is answered with specifics.
 2. **Accurate**: Use tool results as primary evidence. Supplement with your
-   domain knowledge. Never fabricate data.
-3. **Data-rich**: Include specific gene names, cell lines, p-values, effect
-   sizes, IC50 values, trial names, mutation positions, etc.
-4. **Mechanistic**: Explain the biological *why*, not just the *what*.
-5. **Actionable**: End with 3-5 specific experimental next steps (named assays,
-   cell lines, concentrations, readouts).
+   plant science knowledge. Never fabricate data.
+3. **Data-rich**: Include specific gene names, expression values, ortholog
+   evidence, regulatory pathway members, editing efficiency estimates, and
+   species contexts.
+4. **Mechanistic**: Explain the biological *why*, not just the *what* — gene
+   function, pathway logic, regulatory hierarchy, evolutionary conservation.
+5. **Actionable**: End with 3-5 specific experimental or analytical next steps
+   (named assays, validation approaches, species to test, genomic resources).
 
 BANNED PHRASES — never write these:
 - "cannot be answered with the data retrieved"
 - "failed to retrieve" / "failed to identify"
 - "insufficient data" / "insufficient evidence"
 - "No results were obtained"
-If tools failed, pivot to answering from your knowledge instead.
+If tools failed, pivot to answering from your plant biology knowledge instead.
 """
 
 
@@ -105,33 +121,35 @@ def build_system_prompt(
         parts.append(
             "You have access to all tools via MCP. Key tools:\n"
             "- **run_python**: Execute Python code in a sandbox (pd, np, plt, scipy, sklearn, pysam, gseapy, pydeseq2, BioPython). Variables persist between calls.\n"
-            "- **run_r**: Execute R code directly. Prefer run_r over run_python for: natural splines (ns()), wilcox.test(), p.adjust(), fisher.test(), lm()/predict(), organism-specific KEGG ORA (use KEGGREST package: keggList, keggLink, keggGet for any organism code), and any analysis where R is the reference implementation. R and Python give DIFFERENT results for splines, multiple testing correction, and nonparametric tests — when the expected answer was computed in R, use R.\n"
-            "- **literature.pubmed_search**, **literature.chembl_query**, **literature.openalex_search**: Literature/DB search\n"
-            "- **data_api.opentargets_search**, **data_api.depmap_search**, **data_api.uniprot_lookup**: Platform APIs\n"
-            "- **omics.geo_search**, **omics.geo_fetch**, **omics.deseq2**, **omics.dataset_info**: Omics data discovery + analysis\n"
-            "- **expression.pathway_enrichment**, **expression.l1000_similarity**: Expression/pathway tools\n"
-            "- **viability.dose_response**, **clinical.indication_map**, **clinical.trial_search**: Viability/clinical\n"
-            "- **chemistry.descriptors**, **chemistry.sar_analyze**, **chemistry.pubchem_lookup**: Chemistry tools\n"
-            "- **target.coessentiality**, **genomics.gwas_lookup**, **protein.function_predict**: Target/genomics tools\n"
-            "- **safety.classify**, **safety.admet_predict**: Safety/ADMET tools\n"
-            "\nFor data analysis questions, prefer **run_python** — it's the most powerful tool.\n"
-            "For drug discovery questions, combine domain tools with your knowledge.\n"
+            "- **run_r**: Execute R code directly. Prefer run_r for: natural splines, wilcox.test(), p.adjust(), fisher.test(), lm()/predict(), KEGG ORA via KEGGREST, and analyses where R is the reference implementation.\n"
+            "- **literature.pubmed_search**, **literature.openalex_search**, **literature.patent_search**: Literature and database search\n"
+            "- **data_api.uniprot_lookup**, **data_api.ensembl_lookup**, **data_api.ncbi_gene**, **data_api.mygene_lookup**: Gene/protein data APIs\n"
+            "- **genomics.gwas_lookup**, **genomics.eqtl_lookup**, **genomics.variant_annotate**: Genomics and variant tools\n"
+            "- **omics.geo_search**, **omics.geo_fetch**, **omics.deseq2**, **omics.dataset_info**: Omics data discovery and analysis\n"
+            "- **expression.pathway_enrichment**, **expression.diff_expression**, **expression.tf_activity**: Expression and pathway tools\n"
+            "- **network.ppi_analysis**, **network.pathway_crosstalk**: Protein interaction and pathway network analysis\n"
+            "- **protein.embed**, **protein.function_predict**, **protein.domain_annotate**: Protein structure and function\n"
+            "- **dna.primer_design**, **dna.codon_optimize**, **dna.gibson_design**, **dna.golden_gate_design**: DNA biology and cloning\n"
+            "- **singlecell.cluster**, **singlecell.trajectory**, **singlecell.cell_type_annotate**: Single-cell analysis\n"
+            "\nFor data analysis questions, prefer **run_python** — it is the most powerful tool.\n"
+            "For plant biology questions, combine domain tools with your expertise across species.\n"
         )
 
     # 3. Workflow guides (compact — key sequences for common tasks)
-    try:
-        from ct.agent.workflows import format_workflows_for_llm
-        workflows = format_workflows_for_llm()
-        if workflows:
-            parts.append(workflows)
-    except Exception as e:
-        logger.warning("Could not load workflows: %s", e)
+    # NOTE: The upstream workflows module contains pharma-domain workflows.
+    # Plant-specific workflows will be added in a later phase. Skip for now
+    # to avoid injecting pharma content into the plant science agent prompt.
+    # try:
+    #     from ct.agent.workflows import format_workflows_for_llm
+    #     workflows = format_workflows_for_llm()
+    #     if workflows:
+    #         parts.append(workflows)
+    # except Exception as e:
+    #     logger.warning("Could not load workflows: %s", e)
 
-    # 4. Domain knowledge primer (CRITICAL for drug discovery accuracy)
-    # NOTE: The KNOWLEDGE_PRIMER contains both tool orientation AND domain facts.
-    # The tool orientation section overlaps with MCP tool descriptions but the
-    # cross-disciplinary thinking patterns and domain-specific accuracy anchors
-    # are essential. Include in full.
+    # 4. Domain knowledge primer (CRITICAL for plant science accuracy)
+    # NOTE: The KNOWLEDGE_PRIMER contains plant biology domain facts and tool orientation.
+    # Include in full — it grounds the agent's reasoning in plant science.
     try:
         from ct.agent.knowledge import KNOWLEDGE_PRIMER
         parts.append("\n" + KNOWLEDGE_PRIMER)
