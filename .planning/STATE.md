@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-02-26T19:16:00Z"
+last_updated: "2026-02-26T19:24:00Z"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 03 of 5 (External Connectors — STRING PPI, PubMed, UniProt, Ensembl Plants)
-Plan: 1 of 4 in current phase (complete)
-Status: Plan 03-01 complete — disk cache helper and STRING plant PPI tool added
-Last activity: 2026-02-26 — Plan 03-01 complete: _api_cache.py + interactions.string_plant_ppi tool
+Plan: 2 of 4 in current phase (complete)
+Status: Plan 03-02 complete — PubMed plant search + Lens.org patent search tools added with MCP hiding
+Last activity: 2026-02-26 — Plan 03-02 complete: pubmed_plant_search + lens_patent_search with MCP hiding
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -44,10 +44,10 @@ Progress: [████████░░] 75%
 | 02-data-infrastructure | 4 | 16 min | 4 min |
 | 02.1-integration-fixes | 1 | 6 min | 6 min |
 | 02.2-integration-fixes-ii | 1 | 8 min | 8 min |
-| 03-external-connectors | 1 | 6 min | 6 min |
+| 03-external-connectors | 2 | 11 min | 5.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (10 min), 02-04 (1 min), 02.1-01 (6 min), 02.2-01 (8 min), 03-01 (6 min)
+- Last 5 plans: 02-04 (1 min), 02.1-01 (6 min), 02.2-01 (8 min), 03-01 (6 min), 03-02 (5 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -84,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 02.2-integration-fixes-ii]: species added to entry() passthrough set alongside other registered Typer subcommands
 - [Phase 02.2-integration-fixes-ii]: entry() passthrough set must include every Typer subcommand registered with app.add_typer() — omissions silently route to NL query mode
 - [Phase 03-external-connectors]: Patch source modules not lazy-import tool namespaces — lazy imports inside function body mean names never exist at module level; tests must patch ct.tools._species, ct.tools.http_client, ct.tools._api_cache directly
+- [Phase 03-external-connectors 03-02]: Module-level _pubmed_rate_limit_warned flag for once-per-process semantics — simpler than session attribute, correct for NCBI rate limit UX
+- [Phase 03-external-connectors 03-02]: MCP credential gating via set union on exclude_tools before registry loop — minimal change, consistent with existing exclusion pattern; tool still guards internally for belt-and-suspenders safety
 
 ### Pending Todos
 
@@ -99,5 +101,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 03-01-PLAN.md — disk cache helper and STRING plant PPI tool with tests
+Stopped at: Completed 03-02-PLAN.md — PubMed plant search + Lens.org patent search with MCP hiding
 Resume file: None

@@ -24,8 +24,8 @@ Requirements for Milestone 1: Working Plant Science Agent.
 ### External Connectors
 
 - [x] **CONN-01**: User can query STRING plant PPI networks via API for protein interaction evidence
-- [ ] **CONN-02**: User can search PubMed with plant-specific query construction for literature evidence
-- [ ] **CONN-03**: User can search Lens.org for patent landscape and novelty assessment
+- [x] **CONN-02**: User can search PubMed with plant-specific query construction for literature evidence
+- [x] **CONN-03**: User can search Lens.org for patent landscape and novelty assessment
 
 ### Plant Science Tools
 
@@ -105,8 +105,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 2 | Complete |
 | DATA-04 | Phase 2, 2.2 | Complete (integration fix pending) |
 | CONN-01 | Phase 3 | Complete |
-| CONN-02 | Phase 3 | Pending |
-| CONN-03 | Phase 3 | Pending |
+| CONN-02 | Phase 3 | Complete |
+| CONN-03 | Phase 3 | Complete |
 | TOOL-01 | Phase 4 | Pending |
 | TOOL-02 | Phase 4 | Pending |
 | TOOL-03 | Phase 4 | Pending |
