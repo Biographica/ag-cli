@@ -17,6 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - Fork setup, plant system prompt, runtime pharma tool filtering, and rebranding (completed 2026-02-25)
 - [x] **Phase 2: Data Infrastructure** - Local-first data loader pattern, species registry, manifest system, organism validation (gap closure in progress) (completed 2026-02-25)
 - [x] **Phase 2.1: Integration Fixes** - INSERTED — Fix cross-phase wiring issues found by milestone audit (species default form, parity YAML backing, stale branding) (completed 2026-02-26)
+- [ ] **Phase 2.2: Integration Fixes II** - INSERTED — Fix CLI routing bug for species subcommand and missing PyYAML dependency found by re-audit
 - [ ] **Phase 3: External Connectors** - STRING, PubMed, and Lens.org API connectors with plant-specific query construction
 - [ ] **Phase 4: Plant Genomics Tools** - Gene annotation, ortholog mapping, co-expression analysis, GFF parsing, GWAS/QTL lookup
 - [ ] **Phase 5: Gene Editing and Evidence Tools** - CRISPR guide design, editability scoring, paralogy scoring, multi-species evidence gathering
@@ -70,6 +71,19 @@ Plans:
 Plans:
 - [x] 02.1-01-PLAN.md — Fix species default form, wire parity to YAML registry, fix stale branding (DATA-03, DATA-04, FOUN-03, FOUN-04)
 
+### Phase 2.2: Integration Fixes II (INSERTED)
+**Goal**: CLI routing correctly dispatches `ag species list` to the species subcommand, and clean installs succeed without missing PyYAML dependency
+**Depends on**: Phase 2.1
+**Requirements**: DATA-01, DATA-02, DATA-04 (gap closure — requirements satisfied but integration bugs found in re-audit)
+**Gap Closure**: Closes integration gaps from v1.0 re-audit
+**Success Criteria** (what must be TRUE):
+  1. Running `ag species list` via the installed CLI entry point dispatches to the species subcommand and returns the species registry (not a natural-language query)
+  2. A clean `pip install` in a fresh virtualenv succeeds and `import yaml` works in `_species.py` and `manifest.py`
+**Plans**: 1 plan
+
+Plans:
+- [ ] 02.2-01-PLAN.md — Fix species CLI routing and add PyYAML dependency (DATA-01, DATA-02, DATA-04)
+
 ### Phase 3: External Connectors
 **Goal**: The agent can query STRING plant PPI networks, search PubMed with plant-specific queries, and retrieve patent data from Lens.org as evidence sources in a research workflow
 **Depends on**: Phase 2
@@ -121,13 +135,14 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 2.1 -> 3 -> 4 -> 5
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete    | 2026-02-25 |
 | 2. Data Infrastructure | 4/4 | Complete   | 2026-02-25 |
 | 2.1 Integration Fixes | 1/1 | Complete | 2026-02-26 |
+| 2.2 Integration Fixes II | 0/1 | Not started | - |
 | 3. External Connectors | 0/3 | Not started | - |
 | 4. Plant Genomics Tools | 0/3 | Not started | - |
 | 5. Gene Editing and Evidence Tools | 0/3 | Not started | - |

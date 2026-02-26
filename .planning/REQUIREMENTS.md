@@ -100,10 +100,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUN-02 | Phase 1 | Complete (01-01) |
 | FOUN-03 | Phase 1 | Complete |
 | FOUN-04 | Phase 1 | Complete |
-| DATA-01 | Phase 2 | Complete |
-| DATA-02 | Phase 2 | Complete |
+| DATA-01 | Phase 2, 2.2 | Complete (integration fix pending) |
+| DATA-02 | Phase 2, 2.2 | Complete (integration fix pending) |
 | DATA-03 | Phase 2 | Complete |
-| DATA-04 | Phase 2 | Complete |
+| DATA-04 | Phase 2, 2.2 | Complete (integration fix pending) |
 | CONN-01 | Phase 3 | Pending |
 | CONN-02 | Phase 3 | Pending |
 | CONN-03 | Phase 3 | Pending |
