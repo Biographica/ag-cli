@@ -65,10 +65,10 @@ Plans:
   2. `parity.mygene_lookup` resolves species via `_species.py` backed by `species_registry.yaml`, not a standalone hardcoded dict
   3. `ag data pull plantexp` output says `ag config set` not `ct config set`
   4. No user-facing CLI output references `ct` instead of `ag`
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02.1-01: Fix species default form, wire parity to YAML registry, fix stale branding
+- [ ] 02.1-01-PLAN.md — Fix species default form, wire parity to YAML registry, fix stale branding (DATA-03, DATA-04, FOUN-03, FOUN-04)
 
 ### Phase 3: External Connectors
 **Goal**: The agent can query STRING plant PPI networks, search PubMed with plant-specific queries, and retrieve patent data from Lens.org as evidence sources in a research workflow
@@ -121,7 +121,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 2.1 → 3 → 4 → 5
+Phases execute in numeric order: 1 -> 2 -> 2.1 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
