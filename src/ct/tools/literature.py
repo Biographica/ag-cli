@@ -9,6 +9,10 @@ import re as _re
 from ct.tools import registry
 from ct.tools.http_client import request, request_json
 
+# Once-per-session flag for PubMed rate limit warning.
+# Set to True after the first warning is emitted so subsequent calls are quiet.
+_pubmed_rate_limit_warned: bool = False
+
 
 def _normalize_pubmed_query(query: str) -> str:
     """Normalize a PubMed query for NCBI E-utilities.
@@ -741,3 +745,417 @@ def _patent_search_pubmed_fallback(query: str, max_results: int) -> dict:
         "total_count": result.get("total_count", 0),
         "articles": result.get("articles", []),
     }
+
+
+# ---------------------------------------------------------------------------
+# Plant-science connectors (Phase 03)
+# ---------------------------------------------------------------------------
+
+
+@registry.register(
+    name="literature.pubmed_plant_search",
+    description="Search PubMed with plant-specific query construction (species + gene). Returns structured citations with abstracts.",
+    category="literature",
+    parameters={
+        "gene": "Gene name or symbol to search for",
+        "species": "Plant species (e.g. 'Arabidopsis thaliana', 'rice'). Used to construct organism-scoped query.",
+        "extra_terms": "Additional search terms to AND into the query (optional)",
+        "max_results": "Maximum number of results (default 10, max 50)",
+        "fetch_abstracts": "Whether to fetch full abstracts via EFetch (default True)",
+    },
+    usage_guide="Search PubMed for plant gene literature with automatic species-aware query construction. Returns the query used so you can refine if results are too broad or too narrow.",
+)
+def pubmed_plant_search(
+    gene: str,
+    species: str = "Arabidopsis thaliana",
+    extra_terms: str = "",
+    max_results: int = 10,
+    fetch_abstracts: bool = True,
+    **kwargs,
+) -> dict:
+    """Search PubMed with plant-specific query construction (species + gene)."""
+    global _pubmed_rate_limit_warned
+
+    from ct.tools._species import resolve_species_binomial
+    from ct.tools._api_cache import get_cached, set_cached
+    from ct.tools.http_client import request_json, request
+
+    max_results = min(int(max_results), 50)
+
+    # Once-per-session rate limit warning when no NCBI API key is configured.
+    session = kwargs.get("_session")
+    ncbi_key = session.config.get("api.ncbi_key") if session else None
+    if not ncbi_key and not _pubmed_rate_limit_warned:
+        _pubmed_rate_limit_warned = True
+        rate_note = (
+            "Note: NCBI API key not configured — rate limited to 3 req/s. "
+            "Set via: ag config set api.ncbi_key <key>"
+        )
+    else:
+        rate_note = ""
+
+    # Build organism-scoped query.
+    binomial = resolve_species_binomial(species)
+    if binomial:
+        query = f'({gene}[Title/Abstract]) AND ("{binomial}"[Organism])'
+    else:
+        query = f"({gene}[Title/Abstract]) AND (plant[MeSH Terms])"
+    if extra_terms:
+        query = f"({query}) AND ({extra_terms})"
+    query = _normalize_pubmed_query(query)
+
+    # Disk cache check.
+    cache_key = f"pubmed:{binomial or 'plant'}:{gene}:{extra_terms}:{max_results}:{fetch_abstracts}"
+    cached = get_cached("pubmed", cache_key)
+    if cached is not None:
+        return cached
+
+    # ESearch: retrieve PMIDs.
+    ncbi_params: dict = {
+        "db": "pubmed",
+        "term": query,
+        "retmax": max_results,
+        "retmode": "json",
+        "sort": "relevance",
+        "tool": "ag-cli",
+        "email": "research@biographica.com",
+    }
+    if ncbi_key:
+        ncbi_params["api_key"] = ncbi_key
+
+    esearch_data, error = request_json(
+        "GET",
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+        params=ncbi_params,
+        timeout=15,
+        retries=2,
+    )
+    if error:
+        return {
+            "error": error,
+            "summary": f"PubMed search failed: {error}",
+            "query_used": query,
+        }
+
+    pmids = esearch_data.get("esearchresult", {}).get("idlist", [])
+    total_count = int(esearch_data.get("esearchresult", {}).get("count", 0))
+
+    if not pmids:
+        return {
+            "summary": (
+                f"No PubMed results for query: {query}."
+                + (f" {rate_note}" if rate_note else "")
+            ),
+            "query_used": query,
+            "total_count": 0,
+            "articles": [],
+            "species": binomial,
+            "gene": gene,
+        }
+
+    # ESummary: citation metadata.
+    summary_params: dict = {
+        "db": "pubmed",
+        "id": ",".join(pmids),
+        "retmode": "json",
+        "tool": "ag-cli",
+        "email": "research@biographica.com",
+    }
+    if ncbi_key:
+        summary_params["api_key"] = ncbi_key
+
+    summary_data, error = request_json(
+        "GET",
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi",
+        params=summary_params,
+        timeout=15,
+        retries=2,
+    )
+    if error:
+        summary_data = {}
+
+    result_map = summary_data.get("result", {}) if summary_data else {}
+
+    # EFetch: full abstracts (optional).
+    pmid_to_abstract: dict[str, str] = {}
+    if fetch_abstracts:
+        fetch_params: dict = {
+            "db": "pubmed",
+            "id": ",".join(pmids),
+            "retmode": "xml",
+            "rettype": "abstract",
+            "tool": "ag-cli",
+            "email": "research@biographica.com",
+        }
+        if ncbi_key:
+            fetch_params["api_key"] = ncbi_key
+
+        fetch_resp, fetch_error = request(
+            "GET",
+            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+            params=fetch_params,
+            timeout=30,
+            retries=2,
+        )
+        if not fetch_error and fetch_resp is not None:
+            try:
+                import xml.etree.ElementTree as ET
+
+                root = ET.fromstring(fetch_resp.text)
+                for article in root.findall(".//PubmedArticle"):
+                    # Extract PMID.
+                    pmid_elem = article.find(".//PMID")
+                    pmid_str = pmid_elem.text if pmid_elem is not None else ""
+                    # Extract abstract text (may have multiple AbstractText elements).
+                    abstract_parts = []
+                    for ab_elem in article.findall(".//AbstractText"):
+                        if ab_elem.text:
+                            abstract_parts.append(ab_elem.text)
+                    if pmid_str:
+                        pmid_to_abstract[pmid_str] = " ".join(abstract_parts)
+            except Exception:
+                pass  # Abstract fetch failure is non-fatal.
+
+    # Build articles list.
+    articles = []
+    for pmid in pmids:
+        info = result_map.get(pmid, {})
+        if not info or pmid == "uids":
+            continue
+
+        authors = info.get("authors", [])
+        first_author = authors[0].get("name", "") if authors else ""
+
+        # Year from pubdate (e.g. "2023 Jan 15").
+        pubdate = info.get("pubdate", "")
+        year = pubdate.split()[0] if pubdate else ""
+
+        # DOI from elocationid or articleids.
+        doi = info.get("elocationid", "")
+        if not doi:
+            doi = next(
+                (
+                    a.get("value", "")
+                    for a in info.get("articleids", [])
+                    if a.get("idtype") == "doi"
+                ),
+                "",
+            )
+
+        articles.append(
+            {
+                "pmid": pmid,
+                "title": info.get("title", ""),
+                "abstract": pmid_to_abstract.get(pmid, ""),
+                "authors": first_author,
+                "journal": info.get("fulljournalname", "") or info.get("source", ""),
+                "year": year,
+                "doi": doi,
+            }
+        )
+
+    result = {
+        "summary": (
+            f"Found {total_count} PubMed results for '{gene}' in "
+            f"{binomial or 'plants'} (showing {len(articles)})"
+            + (f". {rate_note}" if rate_note else ".")
+        ),
+        "query_used": query,
+        "total_count": total_count,
+        "articles": articles,
+        "species": binomial,
+        "gene": gene,
+    }
+
+    set_cached("pubmed", cache_key, result)
+    return result
+
+
+@registry.register(
+    name="literature.lens_patent_search",
+    description="Search Lens.org for patents related to a plant gene or trait. Supports gene-focused (narrow) and landscape (broad) modes.",
+    category="literature",
+    parameters={
+        "query_text": "Primary search term — gene name for gene mode, or crop/trait for landscape mode",
+        "mode": "Query mode: 'gene' (gene AND species, default) or 'landscape' (crop AND trait)",
+        "species": "Species for gene mode (default: Arabidopsis thaliana). Ignored in landscape mode.",
+        "trait": "Trait term for landscape mode (e.g. 'drought tolerance'). Required for landscape mode.",
+        "max_results": "Maximum number of results (default 10, max 20)",
+    },
+    usage_guide="Search Lens.org for plant-related patents. Use 'gene' mode for specific gene/target patent assessment. Use 'landscape' mode with crop + trait for freedom-to-operate analysis. Requires api.lens_key to be configured.",
+)
+def lens_patent_search(
+    query_text: str,
+    mode: str = "gene",
+    species: str = "Arabidopsis thaliana",
+    trait: str = "",
+    max_results: int = 10,
+    **kwargs,
+) -> dict:
+    """Search Lens.org for plant-related patents (gene or landscape mode)."""
+    from ct.tools._api_cache import get_cached, set_cached
+    from ct.tools.http_client import request
+    from ct.tools._species import resolve_species_binomial
+
+    session = kwargs.get("_session")
+    lens_key = session.config.get("api.lens_key") if session else None
+    if not lens_key:
+        return {
+            "error": "Lens.org API key not configured. Run: ag config set api.lens_key <key>",
+            "summary": "Lens.org API key not configured.",
+        }
+
+    max_results = min(int(max_results), 20)
+
+    # Build query string based on mode.
+    if mode == "landscape":
+        if not trait:
+            return {
+                "error": "Landscape mode requires 'trait' parameter.",
+                "summary": "Missing 'trait' parameter for landscape mode.",
+            }
+        query_string = f'("{query_text}") AND ("{trait}")'
+    else:
+        # gene mode (default)
+        binomial = resolve_species_binomial(species)
+        if binomial:
+            query_string = f'("{query_text}") AND ("{binomial}")'
+        else:
+            query_string = f'("{query_text}") AND ("plant")'
+
+    # Disk cache check.
+    cache_key = f"lens:{mode}:{query_string}:{max_results}"
+    cached = get_cached("lens_patents", cache_key)
+    if cached is not None:
+        return cached
+
+    # Lens.org Patent Search API.
+    payload = {
+        "query": {
+            "query_string": {
+                "query": query_string,
+                "fields": ["title", "abstract", "claim"],
+            }
+        },
+        "include": [
+            "lens_id",
+            "title",
+            "abstract",
+            "claim",
+            "applicant",
+            "publication_date",
+            "doc_number",
+            "jurisdiction",
+            "kind",
+        ],
+        "size": max_results,
+        "sort": [{"relevance": "desc"}],
+    }
+
+    resp, error = request(
+        "POST",
+        "https://api.lens.org/patent/search",
+        json=payload,
+        headers={
+            "Authorization": f"Bearer {lens_key}",
+            "Content-Type": "application/json",
+        },
+        timeout=30,
+        retries=2,
+        raise_for_status=False,
+    )
+    if error:
+        return {
+            "error": f"Lens.org API request failed: {error}",
+            "summary": f"Lens.org API request failed: {error}",
+        }
+    if resp.status_code >= 400:
+        try:
+            body_snippet = resp.text[:200]
+        except Exception:
+            body_snippet = ""
+        return {
+            "error": f"Lens.org API returned status {resp.status_code}: {body_snippet}",
+            "summary": f"Lens.org API returned status {resp.status_code}.",
+        }
+
+    try:
+        resp_data = resp.json()
+    except Exception:
+        return {
+            "error": "Lens.org API returned invalid JSON",
+            "summary": "Lens.org API returned invalid JSON.",
+        }
+
+    total = resp_data.get("total", 0)
+    results = resp_data.get("data", [])
+
+    patents = []
+    for item in results:
+        # Title: may be a list of dicts with "text" key, or a plain string.
+        title_raw = item.get("title", "")
+        if isinstance(title_raw, list):
+            title = title_raw[0].get("text", "") if title_raw else ""
+        else:
+            title = str(title_raw)
+
+        # Abstract: similar structure.
+        abstract_raw = item.get("abstract", "")
+        if isinstance(abstract_raw, list):
+            abstract = " ".join(
+                entry.get("text", "") for entry in abstract_raw if entry.get("text")
+            )
+        else:
+            abstract = str(abstract_raw)
+
+        # Claims: take first 3, handle list-of-dicts or list-of-strings.
+        claims_raw = item.get("claim", [])
+        if isinstance(claims_raw, list):
+            claims = [
+                c.get("text", str(c)) if isinstance(c, dict) else str(c)
+                for c in claims_raw[:3]
+            ]
+        else:
+            claims = []
+
+        # Applicants.
+        applicants_raw = item.get("applicant", [])
+        if isinstance(applicants_raw, list):
+            applicants = [
+                a.get("name", str(a)) if isinstance(a, dict) else str(a)
+                for a in applicants_raw
+            ]
+        else:
+            applicants = []
+
+        patents.append(
+            {
+                "lens_id": item.get("lens_id", ""),
+                "title": title,
+                "abstract": abstract,
+                "claims": claims,
+                "applicants": applicants,
+                "publication_date": item.get("publication_date", ""),
+                "doc_number": item.get("doc_number", ""),
+                "jurisdiction": item.get("jurisdiction", ""),
+            }
+        )
+
+    if not patents:
+        summary_text = f"No patents found for query: {query_string} on Lens.org."
+    else:
+        summary_text = (
+            f"Found {total} patents matching '{query_string}' on Lens.org "
+            f"(showing {len(patents)})."
+        )
+
+    result = {
+        "summary": summary_text,
+        "query_used": query_string,
+        "mode": mode,
+        "total_count": total,
+        "patents": patents,
+    }
+
+    set_cached("lens_patents", cache_key, result)
+    return result

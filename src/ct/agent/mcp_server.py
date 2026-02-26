@@ -368,6 +368,11 @@ def create_ct_mcp_server(
     exclude_categories = exclude_categories or set()
     exclude_tools = exclude_tools or set()
 
+    # Hide Lens.org patent tool if API key not configured — agent should not
+    # consider it as available without credentials.
+    if not session.config.get("api.lens_key"):
+        exclude_tools = set(exclude_tools) | {"literature.lens_patent_search"}
+
     # Shared buffer: code tool handlers append structured metadata here.
     # The runner reads from this to enrich trace events — bypasses the SDK
     # stream which may truncate/omit tool result content.
