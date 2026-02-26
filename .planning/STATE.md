@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-25T22:30:16.240Z"
+last_updated: "2026-02-26T09:10:10Z"
 progress:
-  total_phases: 2
+  total_phases: 5
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 2.1 of 5 (Integration Fixes — inserted gap closure)
-Plan: 0 of 1 in current phase
-Status: Phase 2.1 not started — needs planning
-Last activity: 2026-02-26 — Milestone audit completed, Phase 2.1 created for integration fixes
+Plan: 1 of 1 in current phase (complete)
+Status: Phase 2.1 complete — all integration gaps closed
+Last activity: 2026-02-26 — Plan 02.1-01 complete: three integration fixes applied
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 65%
 
 ## Performance Metrics
 
@@ -42,9 +42,10 @@ Progress: [██████░░░░] 60%
 |-------|-------|-------|----------|
 | 01-foundation | 2 | 71 min | 36 min |
 | 02-data-infrastructure | 4 | 16 min | 4 min |
+| 02.1-integration-fixes | 1 | 6 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (60 min), 02-01 (3 min), 02-02 (2 min), 02-03 (10 min), 02-04 (1 min)
+- Last 5 plans: 02-01 (3 min), 02-02 (2 min), 02-03 (10 min), 02-04 (1 min), 02.1-01 (6 min)
 - Trend: —
 
 *Updated after each plan completion*
@@ -74,6 +75,9 @@ Recent decisions affecting current work:
 - Sentinel default string used in resolve_species_binomial to reliably detect unknown species — avoids false negative when arabidopsis (the standard default) appears in the dataset's covered list
 - [Phase 02-data-infrastructure]: Sentinel 0 / '' for unknown species rather than default Arabidopsis — callers see 0 and surface clear errors
 - [Phase 02-data-infrastructure]: Guards placed at API entry points (network.py, protein.py) not inside _species.py — context-aware error messages close to the failing call
+- [Phase 02.1-integration-fixes]: Plant species removed from parity.py inline dict — all plant species resolved via YAML registry through resolve_species_taxon; eliminates drift between registry and parity.py
+- [Phase 02.1-integration-fixes]: Default species in load_expression uses space-form 'Arabidopsis thaliana' not underscore 'arabidopsis_thaliana' — underscore form doesn't match YAML registry key
+- [Phase 02.1-integration-fixes]: Slim inline maps retained for MyGene.info reference organisms and parasites — reference organisms only accept named strings from the API; parasites not in YAML
 
 ### Pending Todos
 
@@ -89,5 +93,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Milestone audit complete, Phase 2.1 (Integration Fixes) created — needs /gsd:plan-phase 2.1
+Stopped at: Completed 02.1-01-PLAN.md — three integration fixes applied, Phase 2.1 complete
 Resume file: None

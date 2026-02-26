@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Fork setup, plant system prompt, runtime pharma tool filtering, and rebranding (completed 2026-02-25)
 - [x] **Phase 2: Data Infrastructure** - Local-first data loader pattern, species registry, manifest system, organism validation (gap closure in progress) (completed 2026-02-25)
-- [ ] **Phase 2.1: Integration Fixes** - INSERTED — Fix cross-phase wiring issues found by milestone audit (species default form, parity YAML backing, stale branding)
+- [x] **Phase 2.1: Integration Fixes** - INSERTED — Fix cross-phase wiring issues found by milestone audit (species default form, parity YAML backing, stale branding) (completed 2026-02-26)
 - [ ] **Phase 3: External Connectors** - STRING, PubMed, and Lens.org API connectors with plant-specific query construction
 - [ ] **Phase 4: Plant Genomics Tools** - Gene annotation, ortholog mapping, co-expression analysis, GFF parsing, GWAS/QTL lookup
 - [ ] **Phase 5: Gene Editing and Evidence Tools** - CRISPR guide design, editability scoring, paralogy scoring, multi-species evidence gathering
@@ -53,7 +53,7 @@ Plans:
 - [x] 02-01-PLAN.md — Species registry YAML, manifest loader, ag species list CLI command (DATA-02, DATA-04)
 - [x] 02-02-PLAN.md — Organism validation middleware (@validate_species decorator) (DATA-03)
 - [x] 02-03-PLAN.md — Plant data tools (data.list_datasets, data.load_expression) and downloader entry (DATA-01)
-- [ ] 02-04-PLAN.md — Gap closure: fix unknown-species default (0 not Arabidopsis) and genome_build docs (DATA-02)
+- [x] 02-04-PLAN.md — Gap closure: fix unknown-species default (0 not Arabidopsis) and genome_build docs (DATA-02)
 
 ### Phase 2.1: Integration Fixes (INSERTED)
 **Goal**: All cross-phase wiring between Phase 1 and Phase 2 works correctly — no spurious warnings, no standalone species maps diverging from the YAML registry, no stale CLI branding in user-facing output
@@ -68,7 +68,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02.1-01-PLAN.md — Fix species default form, wire parity to YAML registry, fix stale branding (DATA-03, DATA-04, FOUN-03, FOUN-04)
+- [x] 02.1-01-PLAN.md — Fix species default form, wire parity to YAML registry, fix stale branding (DATA-03, DATA-04, FOUN-03, FOUN-04)
 
 ### Phase 3: External Connectors
 **Goal**: The agent can query STRING plant PPI networks, search PubMed with plant-specific queries, and retrieve patent data from Lens.org as evidence sources in a research workflow
@@ -127,7 +127,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete    | 2026-02-25 |
 | 2. Data Infrastructure | 4/4 | Complete   | 2026-02-25 |
-| 2.1 Integration Fixes | 0/1 | Not started | - |
+| 2.1 Integration Fixes | 1/1 | Complete | 2026-02-26 |
 | 3. External Connectors | 0/3 | Not started | - |
 | 4. Plant Genomics Tools | 0/3 | Not started | - |
 | 5. Gene Editing and Evidence Tools | 0/3 | Not started | - |
