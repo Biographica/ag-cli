@@ -92,12 +92,11 @@ Plans:
   1. The agent can retrieve protein–protein interaction partners and confidence scores for a plant gene from STRING via the `interactions.string_plant_ppi` tool, with organism validation applied before the API call
   2. The agent can run a PubMed search with plant-specific query construction (species name, gene synonym expansion) via the `literature.pubmed_plant_search` tool and return structured citation results
   3. The agent can retrieve patent records for a gene or trait from Lens.org via the `literature.lens_patent_search` tool and summarise the patent landscape
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: STRING plant PPI connector
-- [ ] 03-02: PubMed plant literature connector
-- [ ] 03-03: Lens.org patent search connector
+- [ ] 03-01-PLAN.md — Disk cache helper, STRING plant PPI connector, config registration (CONN-01)
+- [ ] 03-02-PLAN.md — PubMed plant search, Lens.org patent search, MCP hiding (CONN-02, CONN-03)
 
 ### Phase 4: Plant Genomics Tools
 **Goal**: The agent can look up gene annotations, map orthologs across species, analyse co-expression networks, parse genome annotations, and retrieve GWAS/QTL evidence — giving it the genomics reasoning capability needed for plant target research
