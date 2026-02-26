@@ -59,6 +59,7 @@ DEFAULTS = {
 
     "api.ibm_rxn_key": None,
     "api.lens_key": None,
+    "api.ncbi_key": None,
 
     "notification.sendgrid_api_key": None,
     "notification.from_email": None,
@@ -200,6 +201,13 @@ API_KEYS = {
         "env_var": "LENS_API_KEY",
         "description": "Patent search (literature.patent_search)",
         "url": "https://www.lens.org/lens/user/subscriptions",
+        "free": True,
+    },
+    "api.ncbi_key": {
+        "name": "NCBI E-utilities",
+        "env_var": "NCBI_API_KEY",
+        "description": "Higher PubMed rate limits (literature.pubmed_plant_search)",
+        "url": "https://www.ncbi.nlm.nih.gov/account/",
         "free": True,
     },
     "notification.sendgrid_api_key": {
@@ -359,6 +367,7 @@ class Config:
             "CT_LLM_MODEL": "llm.model",
             "IBM_RXN_API_KEY": "api.ibm_rxn_key",
             "LENS_API_KEY": "api.lens_key",
+            "NCBI_API_KEY": "api.ncbi_key",
             "SENDGRID_API_KEY": "notification.sendgrid_api_key",
             "LAMBDA_API_KEY": "compute.lambda_api_key",
             "RUNPOD_API_KEY": "compute.runpod_api_key",

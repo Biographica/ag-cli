@@ -39,6 +39,7 @@ PLANT_SCIENCE_CATEGORIES = frozenset({
     "experiment",
     "parity",
     "data",
+    "interactions",
 })
 _TOOL_MODULES = (
     "target",
@@ -81,6 +82,7 @@ _TOOL_MODULES = (
     "clue",
     "remote_data",
     "plant_data",
+    "interactions",
 )
 
 
