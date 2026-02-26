@@ -53,6 +53,48 @@ def test_mygene_lookup_species_phrase_normalization():
     assert result["species"] == "6183"
 
 
+def test_mygene_lookup_plant_species_via_registry():
+    """Rice ('rice') must resolve to taxon ID '4530' via _species.py registry, not a hardcoded dict."""
+    payload = {"hits": []}
+
+    def _fake_request_json(method, url, params=None, **kwargs):
+        del method, url, kwargs
+        # 'rice' -> resolve_species_taxon -> 4530 (YAML registry)
+        assert params["species"] == "4530", (
+            f"Expected params['species']='4530' but got {params['species']!r}. "
+            "Ensure parity.py calls resolve_species_taxon for plant species."
+        )
+        return payload, None
+
+    with patch("ct.tools.parity.request_json", side_effect=_fake_request_json):
+        result = mygene_lookup("Os01g0100100", species="rice")
+
+    assert result["species"] == "4530"
+
+
+def test_mygene_lookup_yaml_backed_species():
+    """Species resolution goes through resolve_species_taxon, not a hardcoded dict.
+
+    A mock taxon ID (99999) for an invented species string proves the resolution
+    path goes via _species.py rather than an inline mapping.
+    """
+    payload = {"hits": []}
+
+    def _fake_request_json(method, url, params=None, **kwargs):
+        del method, url, kwargs
+        assert params["species"] == "99999", (
+            f"Expected params['species']='99999' but got {params['species']!r}. "
+            "Resolution must go through resolve_species_taxon."
+        )
+        return payload, None
+
+    with patch("ct.tools.parity.resolve_species_taxon", return_value=99999), \
+         patch("ct.tools.parity.request_json", side_effect=_fake_request_json):
+        result = mygene_lookup("GENE1", species="test_plant_species")
+
+    assert result["species"] == "99999"
+
+
 def test_mydisease_lookup_missing_query():
     result = mydisease_lookup("")
     assert result["error"] == "missing_query"

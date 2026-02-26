@@ -19,7 +19,7 @@ class TestDatasetCatalog:
             assert "auto_download" in ds, f"{name} missing auto_download"
 
     def test_expected_datasets_present(self):
-        expected = {"depmap", "prism", "l1000", "msigdb", "string", "alphafold"}
+        expected = {"depmap", "prism", "l1000", "msigdb", "string", "alphafold", "plantexp"}
         assert expected == set(DATASETS.keys())
 
     def test_auto_download_datasets_have_urls(self):
@@ -153,6 +153,25 @@ class TestDownloadDataset:
         # Verify cfg.set was called with data.msigdb
         mock_cfg.set.assert_called_once_with("data.msigdb", str(tmp_path))
         mock_cfg.save.assert_called_once()
+
+    @patch("ct.data.downloader.Config")
+    def test_plantexp_manual_download_branding(self, mock_config, tmp_path, capsys):
+        """Manual-download guidance for plantexp must say 'ag config set', not 'ct config set'."""
+        mock_cfg = MagicMock()
+        mock_cfg.get.return_value = str(tmp_path)
+        mock_config.load.return_value = mock_cfg
+
+        download_dataset("plantexp", output=tmp_path)
+
+        captured = capsys.readouterr()
+        assert "ag config set" in captured.out, (
+            "Expected 'ag config set' in manual-download output but it was not found. "
+            f"Output was:\n{captured.out}"
+        )
+        assert "ct config set" not in captured.out, (
+            "Found stale 'ct config set' branding in manual-download output. "
+            f"Output was:\n{captured.out}"
+        )
 
     @patch("ct.data.downloader._download_file")
     @patch("ct.data.downloader.Config")

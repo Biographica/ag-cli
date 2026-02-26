@@ -159,7 +159,7 @@ def test_load_expression_finds_gene(tmp_path: Path) -> None:
 
     result = load_expression(
         gene="AT1G65480",
-        species="arabidopsis_thaliana",
+        species="Arabidopsis thaliana",
         dataset=str(ds_dir),
     )
 
@@ -177,7 +177,7 @@ def test_load_expression_gene_not_found(tmp_path: Path) -> None:
 
     result = load_expression(
         gene="NONEXISTENT_GENE_XYZ",
-        species="arabidopsis_thaliana",
+        species="Arabidopsis thaliana",
         dataset=str(ds_dir),
     )
 
@@ -193,7 +193,7 @@ def test_load_expression_tissue_filter(tmp_path: Path) -> None:
 
     result = load_expression(
         gene="AT1G65480",
-        species="arabidopsis_thaliana",
+        species="Arabidopsis thaliana",
         dataset=str(ds_dir),
         tissue="leaf",
     )
@@ -202,6 +202,25 @@ def test_load_expression_tissue_filter(tmp_path: Path) -> None:
     # Only leaf tissue should be returned
     for row in result["expression"]:
         assert row["tissue"] == "leaf"
+
+
+def test_load_expression_default_species_no_warning(tmp_path: Path) -> None:
+    """load_expression with no explicit species argument returns data without species_warning.
+
+    The default value 'Arabidopsis thaliana' (space form) must match the YAML
+    registry key so @validate_species resolves it correctly and emits NO warning.
+    """
+    ds_dir = tmp_path / "plantexp"
+    _create_test_dataset(ds_dir)
+
+    # Call WITHOUT explicit species — relies entirely on the default parameter value
+    result = load_expression(gene="AT1G65480", dataset=str(ds_dir))
+
+    assert result["n_samples"] > 0, "Expected data to be returned for AT1G65480"
+    assert "species_warning" not in result, (
+        "Expected NO species_warning when using the default species 'Arabidopsis thaliana'. "
+        f"Got: {result.get('species_warning')}"
+    )
 
 
 def test_load_expression_species_mismatch_warns(tmp_path: Path) -> None:
@@ -240,7 +259,7 @@ def test_load_expression_data_not_found(tmp_path: Path) -> None:
 
     result = load_expression(
         gene="AT1G65480",
-        species="arabidopsis_thaliana",
+        species="Arabidopsis thaliana",
         dataset=str(empty_dir),
     )
 
@@ -256,12 +275,12 @@ def test_load_expression_case_insensitive_gene(tmp_path: Path) -> None:
 
     result_upper = load_expression(
         gene="AT1G65480",
-        species="arabidopsis_thaliana",
+        species="Arabidopsis thaliana",
         dataset=str(ds_dir),
     )
     result_lower = load_expression(
         gene="at1g65480",
-        species="arabidopsis_thaliana",
+        species="Arabidopsis thaliana",
         dataset=str(ds_dir),
     )
 
