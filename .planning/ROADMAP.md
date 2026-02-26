@@ -142,6 +142,6 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5
 | 2. Data Infrastructure | 4/4 | Complete   | 2026-02-25 |
 | 2.1 Integration Fixes | 1/1 | Complete | 2026-02-26 |
 | 2.2 Integration Fixes II | 0/1 | Not started | - |
-| 3. External Connectors | 0/3 | Not started | - |
+| 3. External Connectors | 1/2 | In Progress|  |
 | 4. Plant Genomics Tools | 0/3 | Not started | - |
 | 5. Gene Editing and Evidence Tools | 0/3 | Not started | - |
