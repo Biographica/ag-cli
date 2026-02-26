@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-26T09:21:13.682Z"
+last_updated: "2026-02-26T11:23:37.273Z"
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** A working plant science agent that can explore local curated data, query external databases, and run computational biology analyses across plant species — the engine on which a structured shortlisting pipeline will later be built.
-**Current focus:** Phase 2.1 — Integration Fixes (gap closure from milestone audit)
+**Current focus:** Phase 2.2 — Integration Fixes II (CLI routing and PyYAML dependency)
 
 ## Current Position
 
-Phase: 2.1 of 5 (Integration Fixes — inserted gap closure)
+Phase: 2.2 of 5 (Integration Fixes II — CLI routing bug and missing PyYAML runtime dep)
 Plan: 1 of 1 in current phase (complete)
-Status: Phase 2.1 complete — all integration gaps closed
-Last activity: 2026-02-26 — Plan 02.1-01 complete: three integration fixes applied
+Status: Phase 2.2 complete — CLI routing for species subcommand fixed, PyYAML declared
+Last activity: 2026-02-26 — Plan 02.2-01 complete: species entry() routing and PyYAML dep declared
 
-Progress: [███████░░░] 65%
+Progress: [████████░░] 72%
 
 ## Performance Metrics
 
@@ -43,10 +43,11 @@ Progress: [███████░░░] 65%
 | 01-foundation | 2 | 71 min | 36 min |
 | 02-data-infrastructure | 4 | 16 min | 4 min |
 | 02.1-integration-fixes | 1 | 6 min | 6 min |
+| 02.2-integration-fixes-ii | 1 | 8 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (3 min), 02-02 (2 min), 02-03 (10 min), 02-04 (1 min), 02.1-01 (6 min)
-- Trend: —
+- Last 5 plans: 02-02 (2 min), 02-03 (10 min), 02-04 (1 min), 02.1-01 (6 min), 02.2-01 (8 min)
+- Trend: Stable
 
 *Updated after each plan completion*
 
@@ -78,6 +79,9 @@ Recent decisions affecting current work:
 - [Phase 02.1-integration-fixes]: Plant species removed from parity.py inline dict — all plant species resolved via YAML registry through resolve_species_taxon; eliminates drift between registry and parity.py
 - [Phase 02.1-integration-fixes]: Default species in load_expression uses space-form 'Arabidopsis thaliana' not underscore 'arabidopsis_thaliana' — underscore form doesn't match YAML registry key
 - [Phase 02.1-integration-fixes]: Slim inline maps retained for MyGene.info reference organisms and parasites — reference organisms only accept named strings from the API; parasites not in YAML
+- [Phase 02.2-integration-fixes-ii]: pyyaml listed as runtime dependency (lowercase PyPI name, >=6.0 floor) — used by _species.py and manifest.py
+- [Phase 02.2-integration-fixes-ii]: species added to entry() passthrough set alongside other registered Typer subcommands
+- [Phase 02.2-integration-fixes-ii]: entry() passthrough set must include every Typer subcommand registered with app.add_typer() — omissions silently route to NL query mode
 
 ### Pending Todos
 
@@ -93,5 +97,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 02.1-01-PLAN.md — three integration fixes applied, Phase 2.1 complete
+Stopped at: Completed 02.2-01-PLAN.md — species entry() routing fix and PyYAML dep declared, Phase 2.2 complete
 Resume file: None
