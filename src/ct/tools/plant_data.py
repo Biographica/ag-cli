@@ -104,7 +104,7 @@ def list_datasets(data_root: str = "", **kwargs) -> dict:
     category="data",
     parameters={
         "gene": "Gene identifier (e.g., 'AT1G65480', 'Os01g0100100')",
-        "species": "Species name or taxon ID (default: arabidopsis_thaliana)",
+        "species": "Species name or taxon ID (default: Arabidopsis thaliana)",
         "dataset": "Dataset name or path (default: plantexp)",
         "tissue": "Optional tissue filter (e.g., 'leaf', 'root', 'seed')",
     },
@@ -116,7 +116,7 @@ def list_datasets(data_root: str = "", **kwargs) -> dict:
 @validate_species(dataset_kwarg="dataset")
 def load_expression(
     gene: str,
-    species: str = "arabidopsis_thaliana",
+    species: str = "Arabidopsis thaliana",
     dataset: str = "plantexp",
     tissue: str = "",
     **kwargs,

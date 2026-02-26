@@ -164,7 +164,7 @@ def download_dataset(name: str, output: Path = None):
             status = "[green]found[/green]" if fpath.exists() else "[red]missing[/red]"
             console.print(f"    {fname} — {status}")
         console.print(f"\n  Download from {ds['source']} and place in {dest}/")
-        console.print(f"  Then run: [cyan]ct config set data.{name} {dest}[/cyan]")
+        console.print(f"  Then run: [cyan]ag config set data.{name} {dest}[/cyan]")
         return
 
     # Automatic download

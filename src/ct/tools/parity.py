@@ -12,6 +12,7 @@ import re
 import xml.etree.ElementTree as ET
 
 from ct.tools import registry
+from ct.tools._species import resolve_species_taxon
 from ct.tools.http_client import request, request_json
 
 
@@ -38,50 +39,18 @@ def _flatten_hits(payload, key: str = "hits") -> list[dict]:
     return [h for h in hits if isinstance(h, dict)]
 
 
-_MYGENE_SPECIES_MAP = {
-    # Plant species — taxon IDs used directly by MyGene.info
-    "arabidopsis thaliana": "3702",
-    "arabidopsis": "3702",
-    "at": "3702",
-    "oryza sativa": "4530",
-    "rice": "4530",
-    "os": "4530",
-    "zea mays": "4577",
-    "maize": "4577",
-    "corn": "4577",
-    "zm": "4577",
-    "solanum lycopersicum": "4081",
-    "tomato": "4081",
-    "solanum tuberosum": "4113",
-    "potato": "4113",
-    "triticum aestivum": "4565",
-    "wheat": "4565",
-    "glycine max": "3847",
-    "soybean": "3847",
-    "soy": "3847",
-    "brassica napus": "3708",
-    "canola": "3708",
-    "oilseed rape": "3708",
-    "nicotiana tabacum": "4097",
-    "tobacco": "4097",
-    "populus trichocarpa": "3694",
-    "poplar": "3694",
-    "hordeum vulgare": "4513",
-    "barley": "4513",
-    "sorghum bicolor": "4558",
-    "sorghum": "4558",
-    # Reference organisms (MyGene.info accepts these as named strings)
-    "human": "human",
-    "homo sapiens": "human",
-    "mouse": "mouse",
-    "mus musculus": "mouse",
+# Reference organisms: MyGene.info accepts these as named strings, not taxon IDs
+_MYGENE_REFERENCE_MAP = {
+    "human": "human", "homo sapiens": "human",
+    "mouse": "mouse", "mus musculus": "mouse",
     "rat": "rat",
-    "zebrafish": "zebrafish",
-    "danio rerio": "zebrafish",
+    "zebrafish": "zebrafish", "danio rerio": "zebrafish",
     "drosophila": "fly",
-    "yeast": "yeast",
-    "saccharomyces cerevisiae": "yeast",
-    # Parasites / other
+    "yeast": "yeast", "saccharomyces cerevisiae": "yeast",
+}
+
+# Parasites not in YAML registry -- keep as inline fallback
+_MYGENE_PARASITE_MAP = {
     "schistosoma mansoni": "6183",
     "fasciola hepatica": "6192",
     "heligmosomoides polygyrus": "6337",
@@ -94,21 +63,36 @@ _MYGENE_SPECIES_MAP = {
 def _normalize_mygene_species(species: str) -> str:
     s = (species or "").strip().lower()
     if not s:
-        return s  # Empty string — let the caller or API handle missing species
+        return s
     if s.isdigit():
         return s
-    if s in _MYGENE_SPECIES_MAP:
-        return _MYGENE_SPECIES_MAP[s]
 
-    # Extract likely binomial species from noisy planner text.
+    # Reference organisms: MyGene.info accepts named strings for these only
+    if s in _MYGENE_REFERENCE_MAP:
+        return _MYGENE_REFERENCE_MAP[s]
+
+    # Parasites not in YAML registry
+    if s in _MYGENE_PARASITE_MAP:
+        return _MYGENE_PARASITE_MAP[s]
+
+    # Plant species and all others: resolve via YAML registry -> numeric taxon ID
+    taxon_id = resolve_species_taxon(species)  # passes original casing
+    if taxon_id:
+        return str(taxon_id)
+
+    # Fallback: try regex extraction then return original
     m = re.search(r"([A-Za-z][a-z]+)\s+([a-z][a-z]+)", s)
     if m:
         candidate = f"{m.group(1)} {m.group(2)}".lower()
-        if candidate in _MYGENE_SPECIES_MAP:
-            return _MYGENE_SPECIES_MAP[candidate]
+        if candidate in _MYGENE_REFERENCE_MAP:
+            return _MYGENE_REFERENCE_MAP[candidate]
+        if candidate in _MYGENE_PARASITE_MAP:
+            return _MYGENE_PARASITE_MAP[candidate]
+        taxon_id = resolve_species_taxon(candidate)
+        if taxon_id:
+            return str(taxon_id)
 
-    # Fallback to original value; caller can still get API errors surfaced.
-    return species
+    return species  # last resort: pass through original
 
 
 @registry.register(
