@@ -205,3 +205,14 @@ def test_species_list_command():
     assert "Taxon ID" in result.output
     assert "3702" in result.output
     assert "TAIR10" in result.output
+
+
+def test_pyyaml_declared_as_dependency():
+    """PyYAML must be declared in pyproject.toml — it is used at runtime by _species.py and manifest.py."""
+    import pathlib
+
+    toml_path = pathlib.Path(__file__).resolve().parent.parent / "pyproject.toml"
+    contents = toml_path.read_text()
+    assert "pyyaml" in contents.lower(), (
+        "pyyaml must be listed in [project] dependencies in pyproject.toml"
+    )

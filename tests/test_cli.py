@@ -112,6 +112,24 @@ def test_entry_preserves_trace_subcommand(monkeypatch):
     assert called["args"] == ["trace", "diagnose"]
 
 
+def test_entry_preserves_species_subcommand(monkeypatch):
+    called = {}
+
+    def fake_app(*, args, prog_name):
+        called["args"] = args
+        called["prog_name"] = prog_name
+
+    monkeypatch.setattr("ct.cli.app", fake_app)
+    monkeypatch.setattr("sys.argv", ["ag", "species", "list"])
+
+    from ct.cli import entry
+
+    entry()
+
+    assert called["prog_name"] == "ag"
+    assert called["args"] == ["species", "list"]
+
+
 def test_config_set_agent_profile_applies_preset():
     cfg = Config(data={})
     with patch("ct.agent.config.Config.load", return_value=cfg), patch.object(
