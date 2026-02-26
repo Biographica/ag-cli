@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** A working plant science agent that can explore local curated data, query external databases, and run computational biology analyses across plant species — the engine on which a structured shortlisting pipeline will later be built.
-**Current focus:** Phase 2 — Data Infrastructure
+**Current focus:** Phase 2.1 — Integration Fixes (gap closure from milestone audit)
 
 ## Current Position
 
-Phase: 2 of 5 (Data Infrastructure)
-Plan: 4 of 4 in current phase (PHASE COMPLETE)
-Status: Phase 2 complete
-Last activity: 2026-02-25 — Plan 02-04 complete (gap closure: unknown-species sentinel 0/'' + caller guards in network.py/protein.py)
+Phase: 2.1 of 5 (Integration Fixes — inserted gap closure)
+Plan: 0 of 1 in current phase
+Status: Phase 2.1 not started — needs planning
+Last activity: 2026-02-26 — Milestone audit completed, Phase 2.1 created for integration fixes
 
 Progress: [██████░░░░] 60%
 
@@ -88,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: Completed 02-04-PLAN.md (gap closure: unknown-species sentinel fix + caller guards)
+Last session: 2026-02-26
+Stopped at: Milestone audit complete, Phase 2.1 (Integration Fixes) created — needs /gsd:plan-phase 2.1
 Resume file: None
