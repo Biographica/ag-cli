@@ -1464,6 +1464,7 @@ def entry():
         "case-study",
         "bench",
         "run",
+        "species",
         "--help",
         "-h",
         "--install-completion",
