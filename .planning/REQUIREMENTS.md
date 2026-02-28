@@ -29,11 +29,11 @@ Requirements for Milestone 1: Working Plant Science Agent.
 
 ### Plant Science Tools
 
-- [ ] **TOOL-01**: User can look up gene annotation (GO terms, function, description, linked publications) for any gene in any supported species
-- [ ] **TOOL-02**: User can map orthologs across plant species with phylogenetic distance weighting
+- [x] **TOOL-01**: User can look up gene annotation (GO terms, function, description, linked publications) for any gene in any supported species
+- [x] **TOOL-02**: User can map orthologs across plant species with phylogenetic distance weighting
 - [ ] **TOOL-03**: User can run co-expression network analysis (cluster membership, centrality, enrichment) from expression data
 - [ ] **TOOL-04**: User can parse GFF3 genome annotations and extract gene structure information
-- [ ] **TOOL-05**: User can look up GWAS/QTL evidence for trait-gene associations
+- [x] **TOOL-05**: User can look up GWAS/QTL evidence for trait-gene associations
 - [ ] **TOOL-06**: User can assess CRISPR guide design (PAM sites, guide scoring, off-target prediction) for a gene
 - [ ] **TOOL-07**: User can estimate editability of a gene based on gene structure, guide availability, and regulatory complexity
 - [ ] **TOOL-08**: User can score paralogy/functional redundancy for a gene (paralog count, co-expression overlap, shared annotations)
@@ -107,11 +107,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONN-01 | Phase 3 | Complete |
 | CONN-02 | Phase 3 | Complete |
 | CONN-03 | Phase 3 | Complete |
-| TOOL-01 | Phase 4 | Pending |
-| TOOL-02 | Phase 4 | Pending |
+| TOOL-01 | Phase 4 | Complete |
+| TOOL-02 | Phase 4 | Complete |
 | TOOL-03 | Phase 4 | Pending |
 | TOOL-04 | Phase 4 | Pending |
-| TOOL-05 | Phase 4 | Pending |
+| TOOL-05 | Phase 4 | Complete |
 | TOOL-06 | Phase 5 | Pending |
 | TOOL-07 | Phase 5 | Pending |
 | TOOL-08 | Phase 5 | Pending |

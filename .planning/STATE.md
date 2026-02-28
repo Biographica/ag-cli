@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-02-28T13:50:00.000Z"
+last_updated: "2026-02-28T13:58:00.000Z"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 04 of 5 (Plant Genomics Tools — gene annotation, GWAS/QTL, GFF3 parsing, ortholog mapping)
-Plan: 1 of 3 in current phase (complete)
-Status: Plan 04-01 complete — gene_annotation and gwas_qtl_lookup tools added; gffutils dependency added
-Last activity: 2026-02-28 — Plan 04-01 complete: genomics.gene_annotation + genomics.gwas_qtl_lookup with Ensembl Plants + UniProt
+Plan: 2 of 3 in current phase (complete)
+Status: Plan 04-02 complete — ortholog_map tool added with phylogenetic distance weighting; 9 new tests pass
+Last activity: 2026-02-28 — Plan 04-02 complete: genomics.ortholog_map with Ensembl Compara (compara=plants) + _PHYLO_DISTANCES_MYA matrix
 
-Progress: [████████░░] 82%
+Progress: [████████░░] 85%
 
 ## Performance Metrics
 
@@ -45,10 +45,10 @@ Progress: [████████░░] 82%
 | 02.1-integration-fixes | 1 | 6 min | 6 min |
 | 02.2-integration-fixes-ii | 1 | 8 min | 8 min |
 | 03-external-connectors | 2 | 11 min | 5.5 min |
-| 04-plant-genomics-tools | 1 | 6 min | 6 min |
+| 04-plant-genomics-tools | 2 | 11 min | 5.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02.1-01 (6 min), 02.2-01 (8 min), 03-01 (6 min), 03-02 (5 min), 04-01 (6 min)
+- Last 5 plans: 02.2-01 (8 min), 03-01 (6 min), 03-02 (5 min), 04-01 (6 min), 04-02 (5 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -89,6 +89,10 @@ Recent decisions affecting current work:
 - [Phase 03-external-connectors 03-02]: MCP credential gating via set union on exclude_tools before registry loop — minimal change, consistent with existing exclusion pattern; tool still guards internally for belt-and-suspenders safety
 - [Phase 04-plant-genomics-tools 04-01]: Import genomics tool functions directly in tests (not via registry.get_tool().fn) — Tool dataclass uses .function attribute not .fn; direct module import is cleaner and consistent with Phase 3 approach
 - [Phase 04-plant-genomics-tools 04-01]: gffutils>=0.13 added as core dependency not optional — required for GFF3 parsing in plan 04-03; core status avoids install friction
+- [Phase 04-plant-genomics-tools 04-02]: frozenset keys in _PHYLO_DISTANCES_MYA — symmetric pairs stored once, O(1) lookup without ordering logic in caller
+- [Phase 04-plant-genomics-tools 04-02]: 200 Mya default for unknown taxon pairs — conservative estimate avoids false high weights for distant/uncatalogued pairs
+- [Phase 04-plant-genomics-tools 04-02]: compara=plants hardcoded in params dict not as parameter default — prevents accidental omission; critical correctness requirement
+- [Phase 04-plant-genomics-tools 04-02]: Sort orthologs by phylo_weight desc then percent_identity desc — evolutionary closeness ranks first, sequence similarity breaks ties
 
 ### Pending Todos
 
@@ -104,5 +108,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 04-01-PLAN.md — gene_annotation + gwas_qtl_lookup tools added to genomics.py
+Stopped at: Completed 04-02-PLAN.md — ortholog_map tool with phylogenetic distance weighting added to genomics.py
 Resume file: None
