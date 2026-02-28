@@ -1677,3 +1677,239 @@ def gwas_qtl_lookup(gene: str = "", species: str = "Arabidopsis thaliana", trait
     }
     set_cached("ensembl_phenotype", cache_key, result)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Phylogenetic distance matrix (millions of years, approximate)
+# Curated from published plant phylogenomics (Zeng et al. 2017, APG IV).
+# Used by ortholog_map for distance-based weighting.
+# Key: frozenset of two taxon IDs. Value: approximate divergence time in Mya.
+# Default for unknown pairs: 200 Mya.
+# ---------------------------------------------------------------------------
+_PHYLO_DISTANCES_MYA: dict[frozenset, float] = {
+    # Brassicaceae internal
+    frozenset({3702, 3708}): 43.0,       # Arabidopsis vs Brassica napus
+    # Solanaceae internal
+    frozenset({4081, 4113}): 8.0,        # Tomato vs potato
+    frozenset({4081, 4097}): 30.0,       # Tomato vs tobacco
+    frozenset({4113, 4097}): 30.0,       # Potato vs tobacco
+    # Fabaceae internal
+    frozenset({3847, 3880}): 54.0,       # Soybean vs Medicago
+    frozenset({3847, 34305}): 54.0,      # Soybean vs Lotus
+    frozenset({3880, 34305}): 50.0,      # Medicago vs Lotus
+    # Poaceae (grasses) internal
+    frozenset({4530, 4577}): 50.0,       # Rice vs maize
+    frozenset({4530, 4565}): 50.0,       # Rice vs wheat
+    frozenset({4530, 4513}): 50.0,       # Rice vs barley
+    frozenset({4530, 4558}): 50.0,       # Rice vs sorghum
+    frozenset({4577, 4565}): 25.0,       # Maize vs wheat
+    frozenset({4577, 4513}): 25.0,       # Maize vs barley
+    frozenset({4577, 4558}): 12.0,       # Maize vs sorghum
+    frozenset({4565, 4513}): 12.0,       # Wheat vs barley
+    frozenset({4565, 4558}): 25.0,       # Wheat vs sorghum
+    frozenset({4513, 4558}): 25.0,       # Barley vs sorghum
+    frozenset({4530, 214687}): 100.0,    # Rice vs banana (monocot divergence)
+    frozenset({4577, 214687}): 100.0,    # Maize vs banana
+    frozenset({4565, 214687}): 100.0,    # Wheat vs banana
+    # Eudicot vs monocot (major split ~150 Mya)
+    frozenset({3702, 4530}): 150.0,      # Arabidopsis vs rice
+    frozenset({3702, 4577}): 150.0,      # Arabidopsis vs maize
+    frozenset({3702, 4565}): 150.0,      # Arabidopsis vs wheat
+    frozenset({3702, 4513}): 150.0,      # Arabidopsis vs barley
+    frozenset({3702, 4558}): 150.0,      # Arabidopsis vs sorghum
+    frozenset({3702, 214687}): 150.0,    # Arabidopsis vs banana
+    frozenset({3708, 4530}): 150.0,      # Brassica vs rice
+    frozenset({4081, 4530}): 150.0,      # Tomato vs rice
+    frozenset({3847, 4530}): 150.0,      # Soybean vs rice
+    frozenset({4081, 4577}): 150.0,      # Tomato vs maize
+    frozenset({3847, 4577}): 150.0,      # Soybean vs maize
+    # Core eudicot cross-family
+    frozenset({3702, 4081}): 112.0,      # Arabidopsis vs tomato (rosid vs asterid)
+    frozenset({3702, 3847}): 90.0,       # Arabidopsis vs soybean (rosids)
+    frozenset({3702, 3880}): 90.0,       # Arabidopsis vs Medicago
+    frozenset({3702, 3694}): 100.0,      # Arabidopsis vs poplar (rosids)
+    frozenset({3702, 29760}): 112.0,     # Arabidopsis vs grape
+    frozenset({3702, 3983}): 112.0,      # Arabidopsis vs cassava
+    frozenset({3702, 3635}): 112.0,      # Arabidopsis vs cotton
+    frozenset({3702, 57918}): 90.0,      # Arabidopsis vs strawberry (rosids)
+    frozenset({3847, 4081}): 112.0,      # Soybean vs tomato (rosid vs asterid)
+    frozenset({3694, 4081}): 112.0,      # Poplar vs tomato
+    frozenset({3694, 3847}): 100.0,      # Poplar vs soybean
+    frozenset({3694, 3702}): 100.0,      # Poplar vs Arabidopsis
+    # Self-distances (identity)
+    frozenset({3702, 3702}): 0.0,
+    frozenset({4530, 4530}): 0.0,
+    frozenset({4577, 4577}): 0.0,
+}
+
+
+def _phylo_weight(taxon_a: int, taxon_b: int) -> float:
+    """Return a 0-1 weight inversely proportional to phylogenetic distance.
+
+    Uses the curated distance matrix ``_PHYLO_DISTANCES_MYA``. Unknown
+    pairs default to 200 Mya. Weight formula: ``1 / (1 + dist_mya / 100)``.
+
+    Returns:
+        Float in [0, 1] rounded to 3 decimal places. Higher = more closely related.
+    """
+    if taxon_a == taxon_b:
+        return 1.0
+    key = frozenset({taxon_a, taxon_b})
+    dist = _PHYLO_DISTANCES_MYA.get(key, 200.0)
+    return round(1.0 / (1.0 + dist / 100.0), 3)
+
+
+@registry.register(
+    name="genomics.ortholog_map",
+    description=(
+        "Map a gene to its orthologs across plant species using Ensembl Compara, "
+        "with phylogenetic distance weighting. Returns ortholog gene IDs, species, "
+        "orthology type, percent identity, and distance weight."
+    ),
+    category="genomics",
+    parameters={
+        "gene": "Gene symbol or locus code (e.g. 'FLC', 'AT5G10140', 'OsMADS51')",
+        "species": "Source species (default: Arabidopsis thaliana)",
+        "target_species": "Filter to a specific target species (optional; default: all species)",
+        "force": "Skip species registry check (default: False)",
+    },
+    usage_guide=(
+        "Map a gene to orthologs in other plant species. Use to transfer functional "
+        "knowledge across species — e.g. find the rice ortholog of an Arabidopsis gene. "
+        "Phylogenetic weight indicates evolutionary closeness (higher = more conserved)."
+    ),
+)
+def ortholog_map(
+    gene: str = "",
+    species: str = "Arabidopsis thaliana",
+    target_species: str = None,
+    force: bool = False,
+    **kwargs,
+) -> dict:
+    """Map a gene to its orthologs across plant species using Ensembl Compara."""
+    from ct.tools._species import resolve_species_taxon, resolve_species_binomial
+    from ct.tools.http_client import request_json
+    from ct.tools._api_cache import get_cached, set_cached
+
+    gene = str(gene or "").strip()
+    if not gene:
+        return {
+            "error": "Missing required parameter: gene",
+            "summary": "ortholog_map requires a non-empty gene symbol or locus code.",
+        }
+
+    # Species validation
+    taxon_id = resolve_species_taxon(species)
+    if taxon_id == 0 and not force:
+        return {
+            "error": f"Unknown species: {species!r}. Use force=True to override.",
+            "summary": f"Species not recognised: {species!r}.",
+        }
+    binomial = resolve_species_binomial(species) or species
+
+    # Cache check
+    cache_key = f"ortholog_map:{taxon_id}:{gene}:{target_species or 'all'}"
+    cached = get_cached("ensembl_orthologs", cache_key)
+    if cached is not None:
+        return cached
+
+    ensembl_base = "https://rest.ensembl.org"
+    species_url = binomial.lower().replace(" ", "_")
+
+    # Step 1 — Resolve gene to Ensembl ID
+    gene_data, err = request_json(
+        "GET",
+        f"{ensembl_base}/lookup/symbol/{species_url}/{gene}",
+        params={"content-type": "application/json"},
+        timeout=15,
+        retries=2,
+    )
+    if err or gene_data is None:
+        return {
+            "summary": f"Gene '{gene}' not found in Ensembl Plants for {binomial}.",
+            "gene": gene,
+            "species": binomial,
+            "error": err or "Not found",
+            "orthologs": [],
+        }
+    ensembl_id = gene_data.get("id", "")
+
+    # Step 2 — Ensembl Compara ortholog lookup
+    params = {
+        "content-type": "application/json",
+        "type": "orthologues",
+        "compara": "plants",        # CRITICAL — never use vertebrates default
+        "format": "condensed",
+    }
+    if target_species:
+        target_binomial = resolve_species_binomial(target_species)
+        if target_binomial:
+            params["target_species"] = target_binomial.lower().replace(" ", "_")
+        else:
+            params["target_species"] = target_species.lower().replace(" ", "_")
+
+    homology_data, hom_err = request_json(
+        "GET",
+        f"{ensembl_base}/homology/id/{species_url}/{ensembl_id}",
+        params=params,
+        timeout=30,
+        retries=2,
+    )
+    if hom_err:
+        return {
+            "summary": f"Ensembl Compara query failed for {gene} ({ensembl_id}): {hom_err}",
+            "gene": gene,
+            "ensembl_id": ensembl_id,
+            "species": binomial,
+            "error": hom_err,
+            "orthologs": [],
+        }
+
+    # Step 3 — Parse orthologs and apply phylogenetic distance weight
+    homologies = (homology_data or {}).get("data", [{}])[0].get("homologies", [])
+    orthologs = []
+    for entry in homologies:
+        target = entry.get("target", {})
+        target_id = target.get("id", "")
+        target_species_name = target.get("species", "").replace("_", " ").title()
+        target_taxon = resolve_species_taxon(target_species_name)
+        perc_id = target.get("perc_id", 0)
+        perc_pos = target.get("perc_pos", 0)
+        orthology_type = entry.get("type", "")
+        phylo_weight = _phylo_weight(taxon_id, target_taxon)
+        orthologs.append({
+            "gene_id": target_id,
+            "species": target_species_name,
+            "taxon_id": target_taxon,
+            "orthology_type": orthology_type,
+            "percent_identity": perc_id,
+            "percent_positive": perc_pos,
+            "phylo_weight": phylo_weight,
+        })
+
+    # Sort by phylo_weight descending (closest relatives first), then percent_identity descending
+    orthologs.sort(key=lambda o: (-o["phylo_weight"], -o["percent_identity"]))
+
+    if orthologs:
+        summary = (
+            f"Found {len(orthologs)} ortholog(s) for {gene} ({ensembl_id}) in {binomial} "
+            f"across {len(set(o['species'] for o in orthologs))} species."
+        )
+    else:
+        suggestion = ""
+        if target_species:
+            suggestion = " Try without target_species filter to see all available orthologs."
+        summary = f"No orthologs found for {gene} in Ensembl Plants Compara.{suggestion}"
+
+    result = {
+        "summary": summary,
+        "gene": gene,
+        "ensembl_id": ensembl_id,
+        "species": binomial,
+        "taxon_id": taxon_id,
+        "target_species_filter": target_species,
+        "ortholog_count": len(orthologs),
+        "orthologs": orthologs,
+    }
+    set_cached("ensembl_orthologs", cache_key, result)
+    return result
