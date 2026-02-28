@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-02-28T13:58:00.000Z"
+last_updated: "2026-02-28T14:22:00.000Z"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 04 of 5 (Plant Genomics Tools — gene annotation, GWAS/QTL, GFF3 parsing, ortholog mapping)
-Plan: 2 of 3 in current phase (complete)
-Status: Plan 04-02 complete — ortholog_map tool added with phylogenetic distance weighting; 9 new tests pass
-Last activity: 2026-02-28 — Plan 04-02 complete: genomics.ortholog_map with Ensembl Compara (compara=plants) + _PHYLO_DISTANCES_MYA matrix
+Phase: 04 of 5 (Plant Genomics Tools — COMPLETE)
+Plan: 3 of 3 in current phase (complete) — phase complete, advancing to Phase 05
+Status: Plan 04-03 complete — gff_parse and coexpression_network tools added; 12 new tests pass; all 5 Phase 4 tools registered
+Last activity: 2026-02-28 — Plan 04-03 complete: genomics.gff_parse (gffutils, GFF3 parsing) + genomics.coexpression_network (ATTED-II bulk flat-file co-expression)
 
-Progress: [████████░░] 85%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -45,10 +45,10 @@ Progress: [████████░░] 85%
 | 02.1-integration-fixes | 1 | 6 min | 6 min |
 | 02.2-integration-fixes-ii | 1 | 8 min | 8 min |
 | 03-external-connectors | 2 | 11 min | 5.5 min |
-| 04-plant-genomics-tools | 2 | 11 min | 5.5 min |
+| 04-plant-genomics-tools | 3 | 31 min | 10.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 02.2-01 (8 min), 03-01 (6 min), 03-02 (5 min), 04-01 (6 min), 04-02 (5 min)
+- Last 5 plans: 03-01 (6 min), 03-02 (5 min), 04-01 (6 min), 04-02 (5 min), 04-03 (20 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -93,6 +93,9 @@ Recent decisions affecting current work:
 - [Phase 04-plant-genomics-tools 04-02]: 200 Mya default for unknown taxon pairs — conservative estimate avoids false high weights for distant/uncatalogued pairs
 - [Phase 04-plant-genomics-tools 04-02]: compara=plants hardcoded in params dict not as parameter default — prevents accidental omission; critical correctness requirement
 - [Phase 04-plant-genomics-tools 04-02]: Sort orthologs by phylo_weight desc then percent_identity desc — evolutionary closeness ranks first, sequence similarity breaks ties
+- [Phase 04-plant-genomics-tools 04-03]: gff_parse uses gene: prefix retry before Name attribute scan — Ensembl GFF3 IDs have gene: prefix, raw locus code lookup fails without it
+- [Phase 04-plant-genomics-tools 04-03]: _ATTED_DOWNLOAD_URLS module-level dict allows URL updates without touching function code — ATTED-II URLs are known to change between versions
+- [Phase 04-plant-genomics-tools 04-03]: *.db added to .gitignore — gffutils SQLite databases are generated caches that should not be version-controlled
 
 ### Pending Todos
 
@@ -108,5 +111,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 04-02-PLAN.md — ortholog_map tool with phylogenetic distance weighting added to genomics.py
+Stopped at: Completed 04-03-PLAN.md — Phase 04 complete; gff_parse and coexpression_network tools added, 12 new tests pass
 Resume file: None

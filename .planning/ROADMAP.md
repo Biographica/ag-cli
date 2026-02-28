@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2.1: Integration Fixes** - INSERTED — Fix cross-phase wiring issues found by milestone audit (species default form, parity YAML backing, stale branding) (completed 2026-02-26)
 - [ ] **Phase 2.2: Integration Fixes II** - INSERTED — Fix CLI routing bug for species subcommand and missing PyYAML dependency found by re-audit
 - [x] **Phase 3: External Connectors** - STRING, PubMed, and Lens.org API connectors with plant-specific query construction (completed 2026-02-26)
-- [ ] **Phase 4: Plant Genomics Tools** - Gene annotation, ortholog mapping, co-expression analysis, GFF parsing, GWAS/QTL lookup
+- [x] **Phase 4: Plant Genomics Tools** - Gene annotation, ortholog mapping, co-expression analysis, GFF parsing, GWAS/QTL lookup (completed 2026-02-28)
 - [ ] **Phase 5: Gene Editing and Evidence Tools** - CRISPR guide design, editability scoring, paralogy scoring, multi-species evidence gathering
 
 ## Phase Details
@@ -143,5 +143,5 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5
 | 2.1 Integration Fixes | 1/1 | Complete | 2026-02-26 |
 | 2.2 Integration Fixes II | 0/1 | Not started | - |
 | 3. External Connectors | 2/2 | Complete   | 2026-02-26 |
-| 4. Plant Genomics Tools | 2/3 | In Progress|  |
+| 4. Plant Genomics Tools | 3/3 | Complete   | 2026-02-28 |
 | 5. Gene Editing and Evidence Tools | 0/3 | Not started | - |
