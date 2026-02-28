@@ -1913,3 +1913,451 @@ def ortholog_map(
     }
     set_cached("ensembl_orthologs", cache_key, result)
     return result
+
+
+# ---------------------------------------------------------------------------
+# genomics.gff_parse — GFF3 genome annotation parsing
+# ---------------------------------------------------------------------------
+
+@registry.register(
+    name="genomics.gff_parse",
+    description=(
+        "Parse a GFF3 genome annotation file and extract gene structure: "
+        "exon positions, UTR boundaries, and intron positions for a gene. "
+        "Accepts a local file path or auto-downloads from Ensembl Plants."
+    ),
+    category="genomics",
+    parameters={
+        "gene": "Gene ID or symbol (e.g. 'AT5G10140', 'FLC')",
+        "species": "Species (default: Arabidopsis thaliana)",
+        "gff_path": "Path to local GFF3 file (optional; auto-downloads from Ensembl Plants if absent)",
+        "transcript": "Specific transcript ID to parse (optional; uses first/primary mRNA if absent)",
+        "force": "Skip species registry check (default: False)",
+    },
+    usage_guide=(
+        "Extract gene structure (exons, introns, UTRs) from GFF3 annotations. "
+        "Needed for CRISPR guide design — provides exon boundaries for targeting. "
+        "Provide a local GFF3 path for speed, or let the tool auto-download."
+    ),
+)
+def gff_parse(
+    gene: str = "",
+    species: str = "Arabidopsis thaliana",
+    gff_path: str = None,
+    transcript: str = None,
+    force: bool = False,
+    **kwargs,
+) -> dict:
+    """Parse a GFF3 file and extract exon/UTR/intron structure for a gene."""
+    from pathlib import Path
+    import gzip
+
+    from ct.tools._species import resolve_species_taxon, resolve_species_binomial, _build_lookup
+    from ct.tools.http_client import request
+    from ct.tools._api_cache import _CACHE_BASE
+
+    gene = str(gene or "").strip()
+    if not gene:
+        return {"summary": "Missing required parameter: gene", "error": "Missing gene"}
+
+    # Species validation
+    taxon_id = resolve_species_taxon(species)
+    binomial = resolve_species_binomial(species)
+    if taxon_id == 0 and not force:
+        return {
+            "summary": f"Unknown species: '{species}'. Use force=True to skip validation.",
+            "gene": gene,
+            "error": f"Unknown species: '{species}'",
+        }
+    if not binomial:
+        binomial = species
+
+    # File acquisition
+    if gff_path is not None:
+        gff_local = Path(gff_path)
+        if not gff_local.exists():
+            return {
+                "summary": f"GFF3 file not found: {gff_path}",
+                "gene": gene,
+                "error": f"File not found: {gff_path}",
+            }
+    else:
+        # Auto-download from Ensembl Plants FTP
+        lookup = _build_lookup()
+        entry = lookup.get(species.lower(), (0, "", ""))
+        genome_build = entry[2] if entry[2] else ""
+        if not genome_build:
+            # Try with binomial
+            entry = lookup.get(binomial.lower(), (0, "", ""))
+            genome_build = entry[2] if entry[2] else ""
+        if not genome_build:
+            return {
+                "summary": (
+                    f"No genome build known for '{binomial}'. "
+                    "Please provide gff_path= pointing to a local GFF3 file."
+                ),
+                "gene": gene,
+                "error": "No genome_build in registry for this species",
+            }
+
+        gff_cache_dir = _CACHE_BASE / "gff3"
+        gff_cache_dir.mkdir(parents=True, exist_ok=True)
+        species_url = binomial.lower().replace(" ", "_")
+        species_cap = binomial.replace(" ", "_")
+        gff_local = gff_cache_dir / f"{species_url}.gff3"
+
+        if not gff_local.exists():
+            url = (
+                f"https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-62/gff3/"
+                f"{species_url}/{species_cap}.{genome_build}.62.gff3.gz"
+            )
+            resp, err = request("GET", url, timeout=120, retries=1)
+            if err or resp is None:
+                return {
+                    "summary": (
+                        f"Failed to download GFF3 for {binomial} from Ensembl Plants. "
+                        f"URL: {url}. Error: {err}. "
+                        f"Download manually and provide gff_path=."
+                    ),
+                    "gene": gene,
+                    "error": err or "Download failed",
+                    "url": url,
+                }
+            try:
+                raw = gzip.decompress(resp.content)
+                with open(gff_local, "wb") as fh:
+                    fh.write(raw)
+            except Exception as exc:
+                return {
+                    "summary": f"Failed to decompress GFF3 for {binomial}: {exc}",
+                    "gene": gene,
+                    "error": str(exc),
+                }
+
+    # gffutils database creation or load from cache
+    import gffutils
+
+    db_path = gff_local.with_suffix(".db")
+    try:
+        if db_path.exists():
+            db = gffutils.FeatureDB(str(db_path))
+        else:
+            db = gffutils.create_db(
+                str(gff_local),
+                dbfn=str(db_path),
+                force=True,
+                merge_strategy="merge",
+                disable_infer_genes=True,
+                disable_infer_transcripts=True,
+            )
+    except Exception as exc:
+        return {
+            "summary": f"Failed to create/load gffutils database: {exc}",
+            "gene": gene,
+            "error": str(exc),
+        }
+
+    # Gene lookup: ID, then gene: prefix, then Name attribute fallback
+    gene_feature = None
+    try:
+        gene_feature = db[gene]
+    except gffutils.FeatureNotFoundError:
+        try:
+            gene_feature = db[f"gene:{gene}"]
+        except gffutils.FeatureNotFoundError:
+            # Fallback: search by Name attribute
+            for feat in db.features_of_type("gene"):
+                names = feat.attributes.get("Name", [])
+                if gene in names or gene.upper() in [n.upper() for n in names]:
+                    gene_feature = feat
+                    break
+
+    if gene_feature is None:
+        return {
+            "summary": f"Gene '{gene}' not found in GFF3 file.",
+            "gene": gene,
+            "error": "Gene not found in GFF3",
+        }
+
+    # Extract transcript features
+    selected_mrna = None
+    mrnas = sorted(db.children(gene_feature, featuretype="mRNA"), key=lambda f: f.start)
+    if not mrnas:
+        # Fallback: try "transcript" feature type
+        mrnas = sorted(db.children(gene_feature, featuretype="transcript"), key=lambda f: f.start)
+
+    if not mrnas:
+        return {
+            "summary": f"No transcript features found for gene '{gene}'.",
+            "gene": gene,
+            "gene_id": gene_feature.id,
+            "error": "No mRNA/transcript features found",
+        }
+
+    if transcript:
+        for m in mrnas:
+            if m.id == transcript or transcript in m.id:
+                selected_mrna = m
+                break
+        if selected_mrna is None:
+            selected_mrna = mrnas[0]
+    else:
+        selected_mrna = mrnas[0]
+
+    # Extract exons, UTRs, and compute introns
+    exons = sorted(db.children(selected_mrna, featuretype="exon"), key=lambda f: f.start)
+    five_utrs = sorted(db.children(selected_mrna, featuretype="five_prime_UTR"), key=lambda f: f.start)
+    three_utrs = sorted(db.children(selected_mrna, featuretype="three_prime_UTR"), key=lambda f: f.start)
+
+    exon_list = [{"start": e.start, "end": e.end, "length": e.end - e.start + 1} for e in exons]
+    five_utr_list = [{"start": u.start, "end": u.end, "length": u.end - u.start + 1} for u in five_utrs]
+    three_utr_list = [{"start": u.start, "end": u.end, "length": u.end - u.start + 1} for u in three_utrs]
+
+    # Compute introns from exon gaps
+    introns = []
+    for i in range(len(exons) - 1):
+        intron_start = exons[i].end + 1
+        intron_end = exons[i + 1].start - 1
+        if intron_end >= intron_start:
+            introns.append({
+                "start": intron_start,
+                "end": intron_end,
+                "length": intron_end - intron_start + 1,
+            })
+
+    result = {
+        "summary": (
+            f"Gene structure for {gene} ({gene_feature.id}): "
+            f"{len(exon_list)} exon(s), {len(introns)} intron(s), "
+            f"{gene_feature.end - gene_feature.start + 1:,} bp span."
+        ),
+        "gene": gene,
+        "gene_id": gene_feature.id,
+        "transcript": selected_mrna.id,
+        "species": binomial,
+        "chromosome": gene_feature.seqid,
+        "strand": gene_feature.strand,
+        "gene_start": gene_feature.start,
+        "gene_end": gene_feature.end,
+        "gene_span_bp": gene_feature.end - gene_feature.start + 1,
+        "total_exons": len(exon_list),
+        "total_introns": len(introns),
+        "exons": exon_list,
+        "introns": introns,
+        "five_prime_utrs": five_utr_list,
+        "three_prime_utrs": three_utr_list,
+    }
+    return result
+
+
+# ---------------------------------------------------------------------------
+# genomics.coexpression_network — ATTED-II co-expression analysis
+# ---------------------------------------------------------------------------
+
+_ATTED_DOWNLOAD_URLS = {
+    "arabidopsis_thaliana": "https://atted.jp/download/Ath-r.c7-0.MR.lst.gz",
+    "oryza_sativa": "https://atted.jp/download/Osa-r.c7-0.MR.lst.gz",
+}
+
+
+@registry.register(
+    name="genomics.coexpression_network",
+    description=(
+        "Retrieve co-expressed genes for a plant gene from ATTED-II co-expression data. "
+        "Returns top co-expression partners with Mutual Rank (MR) scores and cluster membership."
+    ),
+    category="genomics",
+    parameters={
+        "gene": "Gene locus code (e.g. 'AT5G10140', 'Os01g0100100')",
+        "species": "Species (default: Arabidopsis thaliana; rice best-effort)",
+        "top_n": "Number of top co-expressed genes to return (default 20, max 100)",
+        "mr_threshold": "Maximum MR score for cluster membership (default 30.0)",
+        "force": "Skip species registry check (default: False)",
+    },
+    usage_guide=(
+        "Find genes that are co-expressed with a query gene using ATTED-II data. "
+        "MR < 5 = very strong co-expression, MR 5-30 = moderate, MR > 30 = weak. "
+        "Arabidopsis has the best coverage. Use gene locus codes (e.g. AT5G10140) not symbols."
+    ),
+)
+def coexpression_network(
+    gene: str = "",
+    species: str = "Arabidopsis thaliana",
+    top_n: int = 20,
+    mr_threshold: float = 30.0,
+    force: bool = False,
+    **kwargs,
+) -> dict:
+    """Retrieve co-expressed genes from ATTED-II bulk co-expression data."""
+    from ct.tools._species import resolve_species_taxon, resolve_species_binomial
+    from ct.tools.http_client import request
+    from ct.tools._api_cache import get_cached, set_cached, _CACHE_BASE
+
+    gene = str(gene or "").strip()
+    if not gene:
+        return {"summary": "Missing required parameter: gene", "error": "Missing gene"}
+
+    # Species validation
+    taxon_id = resolve_species_taxon(species)
+    binomial = resolve_species_binomial(species)
+    if taxon_id == 0 and not force:
+        return {
+            "summary": f"Unknown species: '{species}'. Use force=True to skip validation.",
+            "gene": gene,
+            "error": f"Unknown species: '{species}'",
+        }
+    if not binomial:
+        binomial = species
+
+    # Cap top_n
+    top_n = min(int(top_n), 100)
+
+    # Cache check
+    cache_key = f"coexp:{taxon_id}:{gene}:{top_n}:{mr_threshold}"
+    cached = get_cached("atted_coexp", cache_key, ttl_seconds=604800)
+    if cached is not None:
+        return cached
+
+    # Load ATTED-II data
+    atted_dir = _CACHE_BASE / "atted"
+    atted_dir.mkdir(parents=True, exist_ok=True)
+    species_key = binomial.lower().replace(" ", "_")
+    atted_file = atted_dir / f"{species_key}_coexp.tsv"
+
+    if not atted_file.exists():
+        if species_key not in _ATTED_DOWNLOAD_URLS:
+            return {
+                "summary": (
+                    f"ATTED-II co-expression data is only available for Arabidopsis thaliana "
+                    f"and Oryza sativa (best-effort). '{binomial}' is not supported. "
+                    f"Download manually from https://atted.jp and place at {atted_file}."
+                ),
+                "gene": gene,
+                "species": binomial,
+                "coexpressed_genes": [],
+                "cluster_size": 0,
+                "data_source": "ATTED-II (unsupported species)",
+                "fallback": True,
+            }
+        url = _ATTED_DOWNLOAD_URLS[species_key]
+        resp, err = request("GET", url, timeout=120, retries=1)
+        if err or resp is None:
+            return {
+                "summary": (
+                    f"ATTED-II co-expression data unavailable for {binomial}. "
+                    "Download may have failed — ATTED-II URLs change between versions. "
+                    f"Try downloading manually from https://atted.jp and placing at {atted_file}."
+                ),
+                "gene": gene,
+                "species": binomial,
+                "coexpressed_genes": [],
+                "cluster_size": 0,
+                "data_source": "ATTED-II (unavailable)",
+                "fallback": True,
+            }
+        try:
+            import gzip
+            raw = gzip.decompress(resp.content)
+            with open(atted_file, "wb") as fh:
+                fh.write(raw)
+        except Exception as exc:
+            return {
+                "summary": f"Failed to decompress ATTED-II data for {binomial}: {exc}",
+                "gene": gene,
+                "species": binomial,
+                "coexpressed_genes": [],
+                "cluster_size": 0,
+                "data_source": "ATTED-II (decompression failed)",
+                "fallback": True,
+                "error": str(exc),
+            }
+
+    # Parse ATTED-II file
+    import pandas as pd
+
+    try:
+        df = pd.read_csv(
+            atted_file,
+            sep="\t",
+            header=None,
+            names=["gene_a", "gene_b", "mr_score"],
+            comment="#",
+            usecols=[0, 1, 2],
+        )
+        # Ensure mr_score is numeric
+        df["mr_score"] = pd.to_numeric(df["mr_score"], errors="coerce")
+        df = df.dropna(subset=["mr_score"])
+    except Exception as exc:
+        # Try alternative: single-column layout or different separator
+        try:
+            df = pd.read_csv(atted_file, sep=r"\s+", header=None, comment="#")
+            df = df.iloc[:, :3]
+            df.columns = ["gene_a", "gene_b", "mr_score"]
+            df["mr_score"] = pd.to_numeric(df["mr_score"], errors="coerce")
+            df = df.dropna(subset=["mr_score"])
+        except Exception as exc2:
+            return {
+                "summary": f"Failed to parse ATTED-II data: {exc2}",
+                "gene": gene,
+                "species": binomial,
+                "coexpressed_genes": [],
+                "cluster_size": 0,
+                "data_source": "ATTED-II (parse failed)",
+                "fallback": True,
+                "error": str(exc2),
+            }
+
+    # Filter rows involving the query gene
+    gene_upper = gene.upper()
+    mask = (df["gene_a"].str.upper() == gene_upper) | (df["gene_b"].str.upper() == gene_upper)
+    gene_df = df[mask].copy()
+
+    if gene_df.empty:
+        result = {
+            "summary": (
+                f"No co-expression data found for {gene} in ATTED-II ({binomial}). "
+                "Ensure gene locus code format (e.g. AT5G10140, not gene symbol)."
+            ),
+            "gene": gene,
+            "species": binomial,
+            "taxon_id": taxon_id,
+            "top_n": top_n,
+            "mr_threshold": mr_threshold,
+            "coexpressed_genes": [],
+            "cluster_size": 0,
+            "data_source": "ATTED-II",
+        }
+        set_cached("atted_coexp", cache_key, result)
+        return result
+
+    # Determine the partner gene for each row
+    coexpressed = []
+    for _, row in gene_df.iterrows():
+        gene_a = str(row["gene_a"]).upper()
+        gene_b = str(row["gene_b"]).upper()
+        partner = str(row["gene_b"]) if gene_a == gene_upper else str(row["gene_a"])
+        coexpressed.append({"partner": partner, "mr_score": float(row["mr_score"])})
+
+    # Sort by MR score ascending (lower = stronger co-expression)
+    coexpressed.sort(key=lambda x: x["mr_score"])
+    coexpressed = coexpressed[:top_n]
+
+    # Compute cluster membership
+    cluster_count = sum(1 for c in coexpressed if c["mr_score"] <= mr_threshold)
+
+    result = {
+        "summary": (
+            f"Found {len(coexpressed)} co-expression partner(s) for {gene} in {binomial} "
+            f"(ATTED-II, top {top_n}, MR threshold {mr_threshold})."
+        ),
+        "gene": gene,
+        "species": binomial,
+        "taxon_id": taxon_id,
+        "top_n": top_n,
+        "mr_threshold": mr_threshold,
+        "coexpressed_genes": coexpressed,
+        "cluster_size": cluster_count,
+        "data_source": "ATTED-II",
+    }
+    set_cached("atted_coexp", cache_key, result)
+    return result

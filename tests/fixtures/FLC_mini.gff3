@@ -1,0 +1,8 @@
+##gff-version 3
+##sequence-region   5 3173498 3179449
+5	TAIR10	gene	3173498	3179449	.	-	.	ID=gene:AT5G10140;Name=FLC;biotype=protein_coding
+5	TAIR10	mRNA	3173498	3179449	.	-	.	ID=transcript:AT5G10140.1;Parent=gene:AT5G10140;Name=FLC-201;biotype=protein_coding
+5	TAIR10	five_prime_UTR	3179200	3179449	.	-	.	Parent=transcript:AT5G10140.1
+5	TAIR10	exon	3178500	3179449	.	-	.	Parent=transcript:AT5G10140.1;Name=AT5G10140.1.exon1
+5	TAIR10	exon	3173498	3175000	.	-	.	Parent=transcript:AT5G10140.1;Name=AT5G10140.1.exon2
+5	TAIR10	three_prime_UTR	3173498	3173700	.	-	.	Parent=transcript:AT5G10140.1

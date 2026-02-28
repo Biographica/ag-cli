@@ -30,6 +30,9 @@ venv/
 .ct/
 outputs/
 
+# gffutils SQLite databases (generated caches)
+*.db
+
 # Test workspace
 cttest/
 
