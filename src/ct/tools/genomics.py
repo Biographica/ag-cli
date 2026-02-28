@@ -1385,3 +1385,295 @@ def variant_classify(goal: str, _session=None, _prior_results=None, **kwargs) ->
         session=_session,
         prior_results=_prior_results,
     )
+
+
+@registry.register(
+    name="genomics.gene_annotation",
+    description=(
+        "Look up gene annotation (GO terms, functional description, linked publications) "
+        "for a gene in any supported plant species using Ensembl Plants and UniProt."
+    ),
+    category="genomics",
+    parameters={
+        "gene": "Gene symbol or locus code (e.g. 'FLC', 'AT5G10140', 'GW5')",
+        "species": "Species name (default: Arabidopsis thaliana)",
+        "force": "Skip species registry check and try any species string (default: False)",
+    },
+    usage_guide=(
+        "Get GO terms, functional description, and linked publications for a plant gene. "
+        "Start here for target characterisation. Cross-reference PubMed IDs with "
+        "literature.pubmed_plant_search for full text."
+    ),
+)
+def gene_annotation(gene: str = "", species: str = "Arabidopsis thaliana", force: bool = False, **kwargs) -> dict:
+    """Look up gene annotation from Ensembl Plants and UniProt for a plant gene."""
+    from ct.tools._species import resolve_species_taxon, resolve_species_binomial
+    from ct.tools.http_client import request_json
+    from ct.tools._api_cache import get_cached, set_cached
+
+    gene = str(gene or "").strip()
+    if not gene:
+        return {"error": "Missing required parameter: gene", "summary": "gene_annotation requires a non-empty gene symbol or locus code."}
+
+    # Species validation
+    taxon_id = resolve_species_taxon(species)
+    if taxon_id == 0 and not force:
+        return {
+            "error": f"Unknown species: {species!r}. Use force=True to override.",
+            "summary": f"Species not recognised: {species!r}.",
+        }
+    binomial = resolve_species_binomial(species) or species
+
+    # Cache check
+    cache_key = f"gene_annotation:{taxon_id}:{gene}"
+    cached = get_cached("ensembl_gene", cache_key)
+    if cached is not None:
+        return cached
+
+    ensembl_base = "https://rest.ensembl.org"
+    species_url = binomial.lower().replace(" ", "_")
+
+    # Step 1 — Ensembl Plants gene lookup by symbol
+    gene_data, err = request_json(
+        "GET",
+        f"{ensembl_base}/lookup/symbol/{species_url}/{gene}",
+        params={"content-type": "application/json"},
+        timeout=15,
+        retries=2,
+    )
+    if err or gene_data is None:
+        return {
+            "summary": f"Gene '{gene}' not found in Ensembl Plants for {binomial}.",
+            "gene": gene,
+            "species": binomial,
+            "error": err or "Not found",
+        }
+
+    ensembl_id = gene_data.get("id", "")
+    description = gene_data.get("description", "")
+    display_name = gene_data.get("display_name", gene)
+    biotype = gene_data.get("biotype", "")
+    chromosome = gene_data.get("seq_region_name", "")
+    start = gene_data.get("start")
+    end = gene_data.get("end")
+    strand = gene_data.get("strand")
+
+    # Step 2 — GO cross-references from Ensembl
+    go_terms = []
+    seen_go_ids: set = set()
+    if ensembl_id:
+        go_data, _ = request_json(
+            "GET",
+            f"{ensembl_base}/xrefs/id/{ensembl_id}",
+            params={"content-type": "application/json", "external_db": "GO", "all_levels": 0},
+            timeout=15,
+            retries=2,
+        )
+        for xref in (go_data or []):
+            go_id = xref.get("primary_id", "")
+            if go_id.startswith("GO:") and go_id not in seen_go_ids:
+                seen_go_ids.add(go_id)
+                go_terms.append({
+                    "go_id": go_id,
+                    "term": xref.get("description", ""),
+                    "evidence": xref.get("info_type", ""),
+                    "namespace": "",
+                })
+
+    # Step 3 — UniProt for protein-level GO + publications
+    pubmed_ids = []
+    uniprot_function = ""
+    uniprot_data, _ = request_json(
+        "GET",
+        "https://rest.uniprot.org/uniprotkb/search",
+        params={
+            "query": f"gene:{gene} AND organism_id:{taxon_id} AND reviewed:true",
+            "fields": "gene_names,go,cc_function,lit_pubmed_id",
+            "format": "json",
+            "size": 1,
+        },
+        timeout=15,
+        retries=2,
+    )
+    results = (uniprot_data or {}).get("results", [])
+    if results:
+        entry = results[0]
+        # UniProt GO terms
+        for xref in (entry.get("uniProtKBCrossReferences") or []):
+            if xref.get("database") == "GO":
+                go_id = xref.get("id", "")
+                if go_id and go_id not in seen_go_ids:
+                    seen_go_ids.add(go_id)
+                    namespace = ""
+                    term = ""
+                    for prop in (xref.get("properties") or []):
+                        if prop.get("key") == "GoTerm":
+                            val = prop.get("value", "")
+                            if val.startswith("C:"):
+                                namespace = "cellular_component"
+                                term = val[2:]
+                            elif val.startswith("F:"):
+                                namespace = "molecular_function"
+                                term = val[2:]
+                            elif val.startswith("P:"):
+                                namespace = "biological_process"
+                                term = val[2:]
+                            else:
+                                term = val
+                    go_terms.append({"go_id": go_id, "term": term, "evidence": "", "namespace": namespace})
+        # PubMed IDs
+        for ref in (entry.get("references") or []):
+            citation = ref.get("citation", {})
+            title = citation.get("title", "")
+            for cross_ref in (citation.get("citationCrossReferences") or []):
+                if cross_ref.get("database") == "PubMed":
+                    pubmed_ids.append({"pmid": cross_ref.get("id", ""), "title": title})
+        # Function description
+        for comment in (entry.get("comments") or []):
+            if comment.get("commentType") == "FUNCTION":
+                texts = [t.get("value", "") for t in (comment.get("texts") or [])]
+                uniprot_function = " ".join(t for t in texts if t)
+
+    result = {
+        "summary": (
+            f"Gene annotation for {display_name} ({ensembl_id}) in {binomial}: "
+            f"{len(go_terms)} GO terms, {len(pubmed_ids)} linked publications."
+        ),
+        "gene": gene,
+        "ensembl_id": ensembl_id,
+        "display_name": display_name,
+        "species": binomial,
+        "taxon_id": taxon_id,
+        "description": description,
+        "biotype": biotype,
+        "location": {"chromosome": chromosome, "start": start, "end": end, "strand": strand},
+        "go_terms": go_terms,
+        "function_description": uniprot_function or description,
+        "pubmed_ids": pubmed_ids,
+        "pubmed_count": len(pubmed_ids),
+    }
+    set_cached("ensembl_gene", cache_key, result)
+    return result
+
+
+@registry.register(
+    name="genomics.gwas_qtl_lookup",
+    description=(
+        "Look up GWAS hits and QTL/phenotype annotations for a gene in a plant species "
+        "using the Ensembl Plants phenotype endpoint."
+    ),
+    category="genomics",
+    parameters={
+        "gene": "Gene symbol or locus code (e.g. 'FLC', 'AT5G10140', 'GW5')",
+        "species": "Species name (default: Arabidopsis thaliana)",
+        "trait": "Optional trait keyword to filter results (e.g. 'flowering time', 'yield')",
+        "force": "Skip species registry check (default: False)",
+    },
+    usage_guide=(
+        "Look up GWAS hits and phenotype/QTL evidence for a plant gene. "
+        "Arabidopsis has the richest coverage. For other species, try querying "
+        "the Arabidopsis ortholog if results are sparse."
+    ),
+)
+def gwas_qtl_lookup(gene: str = "", species: str = "Arabidopsis thaliana", trait: str = None, force: bool = False, **kwargs) -> dict:
+    """Look up GWAS hits and phenotype/QTL annotations from Ensembl Plants for a plant gene."""
+    from ct.tools._species import resolve_species_taxon, resolve_species_binomial
+    from ct.tools.http_client import request_json
+    from ct.tools._api_cache import get_cached, set_cached
+
+    gene = str(gene or "").strip()
+    if not gene:
+        return {"error": "Missing required parameter: gene", "summary": "gwas_qtl_lookup requires a non-empty gene symbol or locus code."}
+    trait = str(trait or "").strip() or None
+
+    # Species validation
+    taxon_id = resolve_species_taxon(species)
+    if taxon_id == 0 and not force:
+        return {
+            "error": f"Unknown species: {species!r}. Use force=True to override.",
+            "summary": f"Species not recognised: {species!r}.",
+        }
+    binomial = resolve_species_binomial(species) or species
+
+    # Cache check
+    cache_key = f"gwas_qtl:{taxon_id}:{gene}:{trait or ''}"
+    cached = get_cached("ensembl_phenotype", cache_key)
+    if cached is not None:
+        return cached
+
+    ensembl_base = "https://rest.ensembl.org"
+    species_url = binomial.lower().replace(" ", "_")
+
+    # Step 1 — Resolve gene to Ensembl ID (best-effort; failure is non-fatal)
+    _gene_data, _err = request_json(
+        "GET",
+        f"{ensembl_base}/lookup/symbol/{species_url}/{gene}",
+        params={"content-type": "application/json"},
+        timeout=15,
+        retries=2,
+    )
+    # Proceed regardless — phenotype endpoint accepts gene symbols directly
+
+    # Step 2 — Ensembl phenotype/gene endpoint
+    phenotype_data, _ph_err = request_json(
+        "GET",
+        f"{ensembl_base}/phenotype/gene/{species_url}/{gene}",
+        params={
+            "content-type": "application/json",
+            "include_associated": 1,
+            "include_pubmed_id": 1,
+            "non_specified": 1,
+        },
+        timeout=15,
+        retries=2,
+    )
+
+    # Step 3 — Parse and optionally filter by trait
+    raw_phenotypes = []
+    for entry in (phenotype_data or []):
+        raw_phenotypes.append({
+            "description": entry.get("description", ""),
+            "source": entry.get("source", ""),
+            "study": entry.get("study", ""),
+            "pubmed_id": entry.get("pubmed_id", ""),
+            "attributes": entry.get("attributes", {}),
+        })
+
+    if trait:
+        phenotypes = [p for p in raw_phenotypes if trait.lower() in p["description"].lower()]
+    else:
+        phenotypes = raw_phenotypes
+
+    # Sort: entries with pubmed_id first
+    phenotypes.sort(key=lambda p: (0 if p["pubmed_id"] else 1))
+
+    suggestion = ""
+    if not phenotypes and species_url != "arabidopsis_thaliana":
+        suggestion = (
+            f"No phenotype annotations found for {gene} in {binomial}. "
+            "Arabidopsis has the richest phenotype data in Ensembl Plants. "
+            "Try looking up the Arabidopsis ortholog using genomics.ortholog_map."
+        )
+    elif not phenotypes:
+        suggestion = (
+            f"No phenotype annotations found for {gene} in Ensembl Plants. "
+            "GWAS evidence for plant traits is sparser than for human diseases."
+        )
+
+    result = {
+        "summary": (
+            f"Found {len(phenotypes)} phenotype annotation(s) for {gene} in {binomial}"
+            + (f" matching '{trait}'" if trait else "")
+            + "."
+            + (f" {suggestion}" if suggestion and not phenotypes else "")
+        ),
+        "gene": gene,
+        "species": binomial,
+        "taxon_id": taxon_id,
+        "trait_filter": trait,
+        "phenotype_count": len(phenotypes),
+        "phenotypes": phenotypes,
+        "suggestion": suggestion if not phenotypes else "",
+    }
+    set_cached("ensembl_phenotype", cache_key, result)
+    return result
