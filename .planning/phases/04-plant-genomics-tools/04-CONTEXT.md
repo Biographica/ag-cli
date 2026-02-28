@@ -21,27 +21,27 @@ Five computational genomics tools — gene annotation, ortholog mapping, co-expr
 
 ### Species Coverage
 - Tiered approach: Arabidopsis and rice get full coverage across all 5 tools. Other supported species get best-effort — tools return what's available with clear messaging when data is sparse.
-- When a tool has no data for a species, return empty results with explanation AND suggest alternatives (e.g. "Try searching orthologs in Arabidopsis which has richer GWAS coverage").
-- Registry-gated validation with escape hatch: species must be in the Phase 2 registry by default. A `force=True` parameter lets advanced users try any species string. Consistent with Phase 3 pattern.
-- Phylogenetic distance weighting uses a hardcoded species tree (curated distance matrix for supported species). Fast, deterministic, easy to test.
+- When a tool has no data for a species, return empty results with explanation AND suggest alternatives (e.g. "Try searching orthologs in Arabidopsis which has richer GWAS coverage"). Suggestion only — agent decides whether to follow up.
+- Registry-gated validation with escape hatch: species must be in the Phase 2 registry by default. A `force=True` parameter lets advanced users try any species string. Warn then proceed (consistent with Phase 3 pattern).
+- Phylogenetic distance weighting uses a hardcoded species tree (curated distance matrix covering all registry species). Fast, deterministic, easy to test.
 
 ### Tool Output Depth
 - **Gene annotation:** Core + publications — GO terms, functional description, gene symbol, plus linked PubMed IDs and publication titles. Agent can cross-reference with Phase 3 literature tools.
 - **Ortholog mapping:** Gene list + confidence + phylogenetic distance — ortholog gene IDs, species, orthology type (1:1, 1:many), plus distance weight and % identity. Agent can rank orthologs by evolutionary closeness.
+- **GFF3 parsing:** Exon structure, UTR boundaries, and intron positions — covers what CRISPR guide design (Phase 5) needs.
 - **Co-expression:** Claude's discretion on network metric depth based on what data sources provide and what the agent needs for reasoning.
 - **Cross-references:** Claude's discretion on whether tool outputs hint at related tools.
 
 ### Co-expression Data
 - Pre-built networks from ATTED-II as primary source (no user-supplied expression matrices in this phase).
-- Non-Arabidopsis coverage: Claude decides during research which species have usable pre-built co-expression databases. Likely Arabidopsis + rice minimum.
-- Caching strategy: Claude decides based on data size — could be disk cache (Phase 3 pattern) or dedicated `ag data pull` command for large networks.
+- Caching strategy: Disk cache like Phase 3 (`~/.ct/cache/`) with TTL — consistent with existing pattern, no user setup needed.
 - GO enrichment of clusters: Claude decides whether to use pre-computed enrichments from source or compute on the fly.
+- Non-Arabidopsis coverage: Rice is best-effort — include if a good source exists during research, but don't block the phase on it. Arabidopsis is the priority.
 
 ### Claude's Discretion
 - GWAS/QTL data source selection
 - Co-expression network metric depth
-- Non-Arabidopsis co-expression database selection
-- Caching strategy for co-expression data (disk cache vs data pull)
+- Non-Arabidopsis co-expression database selection (rice best-effort)
 - GO enrichment computation approach
 - Whether tool outputs include cross-references to other tools
 
