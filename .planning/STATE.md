@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-02-26T19:37:56.201Z"
+status: in_progress
+last_updated: "2026-02-28T13:50:00.000Z"
 progress:
   total_phases: 5
-  completed_phases: 5
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 10
+  completed_plans: 6
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** A working plant science agent that can explore local curated data, query external databases, and run computational biology analyses across plant species — the engine on which a structured shortlisting pipeline will later be built.
-**Current focus:** Phase 03 — External Connectors (STRING PPI, PubMed, UniProt, Ensembl)
+**Current focus:** Phase 04 — Plant Genomics Tools (Ensembl Plants gene annotation, GWAS/QTL, GFF3, orthologs)
 
 ## Current Position
 
-Phase: 03 of 5 (External Connectors — STRING PPI, PubMed, UniProt, Ensembl Plants)
-Plan: 2 of 4 in current phase (complete)
-Status: Plan 03-02 complete — PubMed plant search + Lens.org patent search tools added with MCP hiding
-Last activity: 2026-02-26 — Plan 03-02 complete: pubmed_plant_search + lens_patent_search with MCP hiding
+Phase: 04 of 5 (Plant Genomics Tools — gene annotation, GWAS/QTL, GFF3 parsing, ortholog mapping)
+Plan: 1 of 3 in current phase (complete)
+Status: Plan 04-01 complete — gene_annotation and gwas_qtl_lookup tools added; gffutils dependency added
+Last activity: 2026-02-28 — Plan 04-01 complete: genomics.gene_annotation + genomics.gwas_qtl_lookup with Ensembl Plants + UniProt
 
-Progress: [████████░░] 78%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
@@ -45,9 +45,10 @@ Progress: [████████░░] 78%
 | 02.1-integration-fixes | 1 | 6 min | 6 min |
 | 02.2-integration-fixes-ii | 1 | 8 min | 8 min |
 | 03-external-connectors | 2 | 11 min | 5.5 min |
+| 04-plant-genomics-tools | 1 | 6 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (1 min), 02.1-01 (6 min), 02.2-01 (8 min), 03-01 (6 min), 03-02 (5 min)
+- Last 5 plans: 02.1-01 (6 min), 02.2-01 (8 min), 03-01 (6 min), 03-02 (5 min), 04-01 (6 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -86,6 +87,8 @@ Recent decisions affecting current work:
 - [Phase 03-external-connectors]: Patch source modules not lazy-import tool namespaces — lazy imports inside function body mean names never exist at module level; tests must patch ct.tools._species, ct.tools.http_client, ct.tools._api_cache directly
 - [Phase 03-external-connectors 03-02]: Module-level _pubmed_rate_limit_warned flag for once-per-process semantics — simpler than session attribute, correct for NCBI rate limit UX
 - [Phase 03-external-connectors 03-02]: MCP credential gating via set union on exclude_tools before registry loop — minimal change, consistent with existing exclusion pattern; tool still guards internally for belt-and-suspenders safety
+- [Phase 04-plant-genomics-tools 04-01]: Import genomics tool functions directly in tests (not via registry.get_tool().fn) — Tool dataclass uses .function attribute not .fn; direct module import is cleaner and consistent with Phase 3 approach
+- [Phase 04-plant-genomics-tools 04-01]: gffutils>=0.13 added as core dependency not optional — required for GFF3 parsing in plan 04-03; core status avoids install friction
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Completed 03-02-PLAN.md — PubMed plant search + Lens.org patent search with MCP hiding
+Last session: 2026-02-28
+Stopped at: Completed 04-01-PLAN.md — gene_annotation + gwas_qtl_lookup tools added to genomics.py
 Resume file: None
