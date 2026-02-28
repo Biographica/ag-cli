@@ -372,16 +372,25 @@ class TestGwasQtlLookup:
 
 
 def test_all_tools_registered():
-    """Both tools are registered under the genomics category in the plant allowlist."""
+    """All 5 Phase 4 tools are registered under the genomics category in the plant allowlist."""
     from ct.tools import PLANT_SCIENCE_CATEGORIES
 
     t1 = registry.get_tool("genomics.gene_annotation")
     t2 = registry.get_tool("genomics.gwas_qtl_lookup")
+    t3 = registry.get_tool("genomics.ortholog_map")
+    t4 = registry.get_tool("genomics.gff_parse")
+    t5 = registry.get_tool("genomics.coexpression_network")
 
     assert t1 is not None, "genomics.gene_annotation not found in registry"
     assert t1.category == "genomics"
     assert t2 is not None, "genomics.gwas_qtl_lookup not found in registry"
     assert t2.category == "genomics"
+    assert t3 is not None, "genomics.ortholog_map not found in registry"
+    assert t3.category == "genomics"
+    assert t4 is not None, "genomics.gff_parse not found in registry"
+    assert t4.category == "genomics"
+    assert t5 is not None, "genomics.coexpression_network not found in registry"
+    assert t5.category == "genomics"
     assert "genomics" in PLANT_SCIENCE_CATEGORIES
 
 
@@ -599,3 +608,298 @@ def test_ortholog_map_registered():
     t = registry.get_tool("genomics.ortholog_map")
     assert t is not None, "genomics.ortholog_map not found in registry"
     assert t.category == "genomics"
+
+
+# ---------------------------------------------------------------------------
+# TestGffParse
+# ---------------------------------------------------------------------------
+
+
+class TestGffParse:
+    """Tests for genomics.gff_parse."""
+
+    # ------------------------------------------------------------------
+    # 1. Local file success — 2-exon gene, UTRs, intron
+    # ------------------------------------------------------------------
+    @patch("ct.tools._species.resolve_species_binomial", return_value="Arabidopsis thaliana")
+    @patch("ct.tools._species.resolve_species_taxon", return_value=3702)
+    def test_local_file_success(self, mock_taxon, mock_binomial):
+        from pathlib import Path
+
+        fixture = str(Path(__file__).parent / "fixtures" / "FLC_mini.gff3")
+        result = _genomics_module.gff_parse(
+            gene="FLC",
+            species="Arabidopsis thaliana",
+            gff_path=fixture,
+        )
+        assert "error" not in result, f"Unexpected error: {result.get('error')}"
+        assert result["total_exons"] == 2
+        assert isinstance(result["exons"], list) and len(result["exons"]) == 2
+        for exon in result["exons"]:
+            assert "start" in exon and "end" in exon and "length" in exon
+        assert result["total_introns"] == 1
+        assert "start" in result["introns"][0]
+        assert "end" in result["introns"][0]
+        assert "length" in result["introns"][0]
+        assert result["introns"][0]["length"] > 0
+        assert result["chromosome"] == "5"
+        assert result["strand"] == "-"
+        assert "exon" in result["summary"]
+
+    # ------------------------------------------------------------------
+    # 2. Intron computation — start/end values match exon gap
+    # ------------------------------------------------------------------
+    @patch("ct.tools._species.resolve_species_binomial", return_value="Arabidopsis thaliana")
+    @patch("ct.tools._species.resolve_species_taxon", return_value=3702)
+    def test_intron_computation(self, mock_taxon, mock_binomial):
+        from pathlib import Path
+
+        fixture = str(Path(__file__).parent / "fixtures" / "FLC_mini.gff3")
+        result = _genomics_module.gff_parse(
+            gene="FLC",
+            species="Arabidopsis thaliana",
+            gff_path=fixture,
+        )
+        assert result["total_introns"] == 1
+        exons = result["exons"]
+        intron = result["introns"][0]
+        # Intron is the gap between the two sorted exons
+        # exon[0] is the lower-coordinate exon, exon[1] is the higher
+        exon_ends = sorted([e["end"] for e in exons])
+        exon_starts = sorted([e["start"] for e in exons])
+        # The intron start = end of lower exon + 1, intron end = start of upper exon - 1
+        assert intron["start"] == exon_ends[0] + 1
+        assert intron["end"] == exon_starts[1] - 1
+
+    # ------------------------------------------------------------------
+    # 3. Name attribute fallback — FLC looked up by Name not ID
+    # ------------------------------------------------------------------
+    @patch("ct.tools._species.resolve_species_binomial", return_value="Arabidopsis thaliana")
+    @patch("ct.tools._species.resolve_species_taxon", return_value=3702)
+    def test_name_fallback(self, mock_taxon, mock_binomial):
+        from pathlib import Path
+
+        fixture = str(Path(__file__).parent / "fixtures" / "FLC_mini.gff3")
+        # "FLC" is the Name attribute, not the ID (which is "gene:AT5G10140")
+        # The tool should find the gene via Name attribute fallback
+        result = _genomics_module.gff_parse(
+            gene="FLC",
+            species="Arabidopsis thaliana",
+            gff_path=fixture,
+        )
+        assert "error" not in result, f"Unexpected error: {result.get('error')}"
+        assert result["total_exons"] >= 1
+
+    # ------------------------------------------------------------------
+    # 4. Gene not found returns error dict
+    # ------------------------------------------------------------------
+    @patch("ct.tools._species.resolve_species_binomial", return_value="Arabidopsis thaliana")
+    @patch("ct.tools._species.resolve_species_taxon", return_value=3702)
+    def test_gene_not_found(self, mock_taxon, mock_binomial):
+        from pathlib import Path
+
+        fixture = str(Path(__file__).parent / "fixtures" / "FLC_mini.gff3")
+        result = _genomics_module.gff_parse(
+            gene="NONEXISTENT_GENE",
+            species="Arabidopsis thaliana",
+            gff_path=fixture,
+        )
+        assert "error" in result
+        assert "not found" in result["error"].lower() or "not found" in result["summary"].lower()
+
+    # ------------------------------------------------------------------
+    # 5. Auto-download — request called with Ensembl Plants URL
+    # ------------------------------------------------------------------
+    @patch("ct.tools.http_client.request")
+    @patch("ct.tools._species.resolve_species_binomial", return_value="Arabidopsis thaliana")
+    @patch("ct.tools._species.resolve_species_taxon", return_value=3702)
+    def test_auto_download(self, mock_taxon, mock_binomial, mock_request, tmp_path):
+        import gzip
+        from pathlib import Path
+        from unittest.mock import MagicMock
+
+        # Read the real fixture content and compress it
+        fixture = Path(__file__).parent / "fixtures" / "FLC_mini.gff3"
+        with open(fixture, "rb") as fh:
+            gff_bytes = fh.read()
+        compressed = gzip.compress(gff_bytes)
+
+        # Mock the HTTP response
+        mock_resp = MagicMock()
+        mock_resp.content = compressed
+        mock_resp.status_code = 200
+        mock_request.return_value = (mock_resp, None)
+
+        # Patch _CACHE_BASE to use tmp_path so no real files are written
+        with patch("ct.tools._api_cache._CACHE_BASE", tmp_path):
+            result = _genomics_module.gff_parse(
+                gene="FLC",
+                species="Arabidopsis thaliana",
+                # No gff_path — auto-download path
+            )
+
+        # Verify request was called with an Ensembl URL
+        assert mock_request.called
+        call_url = mock_request.call_args[0][1]
+        assert "ensemblgenomes.ebi.ac.uk" in call_url
+        # Verify we got gene structure from the decompressed file
+        assert "error" not in result, f"Unexpected error: {result.get('error')}"
+        assert result["total_exons"] >= 1
+
+    # ------------------------------------------------------------------
+    # 6. Unknown species without force returns error
+    # ------------------------------------------------------------------
+    @patch("ct.tools._species.resolve_species_taxon", return_value=0)
+    def test_unknown_species(self, mock_taxon):
+        from pathlib import Path
+
+        fixture = str(Path(__file__).parent / "fixtures" / "FLC_mini.gff3")
+        result = _genomics_module.gff_parse(
+            gene="FLC",
+            species="martian_grass",
+            gff_path=fixture,
+        )
+        assert "error" in result
+        assert "Unknown species" in result["error"]
+
+
+# ---------------------------------------------------------------------------
+# TestCoexpressionNetwork
+# ---------------------------------------------------------------------------
+
+_ATTED_SAMPLE_TSV = b"""AT5G10140\tAT3G24440\t2.5
+AT5G10140\tAT1G65480\t8.3
+AT5G10140\tAT2G45660\t15.0
+AT5G10140\tAT4G00650\t45.0
+AT1G01010\tAT1G01020\t3.0
+"""
+
+
+class TestCoexpressionNetwork:
+    """Tests for genomics.coexpression_network."""
+
+    def _write_atted_file(self, tmp_path, content: bytes = _ATTED_SAMPLE_TSV):
+        """Create a mock ATTED-II file in tmp_path/atted/."""
+        atted_dir = tmp_path / "atted"
+        atted_dir.mkdir(parents=True, exist_ok=True)
+        atted_file = atted_dir / "arabidopsis_thaliana_coexp.tsv"
+        atted_file.write_bytes(content)
+        return atted_file
+
+    # ------------------------------------------------------------------
+    # 1. Arabidopsis success — correct partners, cluster membership
+    # ------------------------------------------------------------------
+    @patch("ct.tools._api_cache.set_cached")
+    @patch("ct.tools._api_cache.get_cached", return_value=None)
+    @patch("ct.tools._species.resolve_species_binomial", return_value="Arabidopsis thaliana")
+    @patch("ct.tools._species.resolve_species_taxon", return_value=3702)
+    def test_arabidopsis_success(
+        self, mock_taxon, mock_binomial, mock_get_cached, mock_set_cached, tmp_path
+    ):
+        self._write_atted_file(tmp_path)
+        with patch("ct.tools._api_cache._CACHE_BASE", tmp_path):
+            result = _genomics_module.coexpression_network(
+                gene="AT5G10140",
+                species="Arabidopsis thaliana",
+                top_n=20,
+                mr_threshold=30.0,
+            )
+        assert "error" not in result
+        # 4 rows involve AT5G10140 (last row AT1G01010 is excluded)
+        assert len(result["coexpressed_genes"]) == 4
+        # First entry has lowest MR score (strongest co-expression)
+        assert result["coexpressed_genes"][0]["mr_score"] == 2.5
+        # cluster_size = entries with MR <= 30.0: 2.5, 8.3, 15.0 (45.0 excluded)
+        assert result["cluster_size"] == 3
+
+    # ------------------------------------------------------------------
+    # 2. Download fallback — request failure returns fallback dict
+    # ------------------------------------------------------------------
+    @patch("ct.tools._api_cache.get_cached", return_value=None)
+    @patch("ct.tools.http_client.request", return_value=(None, "Connection error"))
+    @patch("ct.tools._species.resolve_species_binomial", return_value="Arabidopsis thaliana")
+    @patch("ct.tools._species.resolve_species_taxon", return_value=3702)
+    def test_download_fallback(
+        self, mock_taxon, mock_binomial, mock_request, mock_get_cached, tmp_path
+    ):
+        with patch("ct.tools._api_cache._CACHE_BASE", tmp_path):
+            result = _genomics_module.coexpression_network(
+                gene="AT5G10140",
+                species="Arabidopsis thaliana",
+            )
+        assert result.get("fallback") is True
+        assert result["coexpressed_genes"] == []
+
+    # ------------------------------------------------------------------
+    # 3. MR threshold filtering — only genes below threshold in cluster
+    # ------------------------------------------------------------------
+    @patch("ct.tools._api_cache.set_cached")
+    @patch("ct.tools._api_cache.get_cached", return_value=None)
+    @patch("ct.tools._species.resolve_species_binomial", return_value="Arabidopsis thaliana")
+    @patch("ct.tools._species.resolve_species_taxon", return_value=3702)
+    def test_mr_threshold(
+        self, mock_taxon, mock_binomial, mock_get_cached, mock_set_cached, tmp_path
+    ):
+        self._write_atted_file(tmp_path)
+        with patch("ct.tools._api_cache._CACHE_BASE", tmp_path):
+            result = _genomics_module.coexpression_network(
+                gene="AT5G10140",
+                species="Arabidopsis thaliana",
+                mr_threshold=10.0,
+            )
+        # Only 2.5 and 8.3 are <= 10.0
+        assert result["cluster_size"] == 2
+
+    # ------------------------------------------------------------------
+    # 4. Gene not in data — empty coexpressed_genes, informative summary
+    # ------------------------------------------------------------------
+    @patch("ct.tools._api_cache.set_cached")
+    @patch("ct.tools._api_cache.get_cached", return_value=None)
+    @patch("ct.tools._species.resolve_species_binomial", return_value="Arabidopsis thaliana")
+    @patch("ct.tools._species.resolve_species_taxon", return_value=3702)
+    def test_gene_not_found_in_data(
+        self, mock_taxon, mock_binomial, mock_get_cached, mock_set_cached, tmp_path
+    ):
+        self._write_atted_file(tmp_path)
+        with patch("ct.tools._api_cache._CACHE_BASE", tmp_path):
+            result = _genomics_module.coexpression_network(
+                gene="AT9G99999",
+                species="Arabidopsis thaliana",
+            )
+        assert result["coexpressed_genes"] == []
+        assert "No co-expression data found" in result["summary"]
+
+    # ------------------------------------------------------------------
+    # 5. top_n limit — returns at most top_n entries
+    # ------------------------------------------------------------------
+    @patch("ct.tools._api_cache.set_cached")
+    @patch("ct.tools._api_cache.get_cached", return_value=None)
+    @patch("ct.tools._species.resolve_species_binomial", return_value="Arabidopsis thaliana")
+    @patch("ct.tools._species.resolve_species_taxon", return_value=3702)
+    def test_top_n_limit(
+        self, mock_taxon, mock_binomial, mock_get_cached, mock_set_cached, tmp_path
+    ):
+        # 10 rows for the query gene
+        rows = "\n".join(
+            f"AT5G10140\tAT1G{i:05d}\t{float(i)}" for i in range(1, 11)
+        ).encode()
+        self._write_atted_file(tmp_path, content=rows)
+        with patch("ct.tools._api_cache._CACHE_BASE", tmp_path):
+            result = _genomics_module.coexpression_network(
+                gene="AT5G10140",
+                species="Arabidopsis thaliana",
+                top_n=3,
+            )
+        assert len(result["coexpressed_genes"]) == 3
+
+    # ------------------------------------------------------------------
+    # 6. Unknown species without force returns error
+    # ------------------------------------------------------------------
+    @patch("ct.tools._species.resolve_species_taxon", return_value=0)
+    def test_unknown_species(self, mock_taxon):
+        result = _genomics_module.coexpression_network(
+            gene="AT5G10140",
+            species="martian_grass",
+        )
+        assert "error" in result
+        assert "Unknown species" in result["error"]
