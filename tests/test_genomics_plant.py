@@ -294,7 +294,7 @@ class TestGwasQtlLookup:
         assert "Flowering" in result["phenotypes"][0]["description"]
 
     # ------------------------------------------------------------------
-    # 3. Empty result for non-Arabidopsis species — cross-species suggestion
+    # 3. Empty result for non-Arabidopsis species — generic sparse-result message
     # ------------------------------------------------------------------
     @patch("ct.tools._api_cache.set_cached")
     @patch("ct.tools._api_cache.get_cached", return_value=None)
@@ -316,10 +316,10 @@ class TestGwasQtlLookup:
         result = _genomics_module.gwas_qtl_lookup(gene="GW5", species="Oryza sativa")
 
         assert result["phenotype_count"] == 0
-        assert "Arabidopsis" in result["suggestion"]
+        assert "data coverage is limited" in result["suggestion"]
 
     # ------------------------------------------------------------------
-    # 4. Empty result for Arabidopsis — sparser-than-human suggestion
+    # 4. Empty result for Arabidopsis — generic sparse-result message
     # ------------------------------------------------------------------
     @patch("ct.tools._api_cache.set_cached")
     @patch("ct.tools._api_cache.get_cached", return_value=None)
@@ -341,7 +341,7 @@ class TestGwasQtlLookup:
         result = _genomics_module.gwas_qtl_lookup(gene="FLC", species="Arabidopsis thaliana")
 
         assert result["phenotype_count"] == 0
-        assert "sparser than for human diseases" in result["suggestion"]
+        assert "data coverage is limited" in result["suggestion"]
 
     # ------------------------------------------------------------------
     # 5. Unknown species without force
