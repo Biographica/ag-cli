@@ -1400,9 +1400,9 @@ def variant_classify(goal: str, _session=None, _prior_results=None, **kwargs) ->
         "force": "Skip species registry check and try any species string (default: False)",
     },
     usage_guide=(
-        "Get GO terms, functional description, and linked publications for a plant gene. "
-        "Start here for target characterisation. Cross-reference PubMed IDs with "
-        "literature.pubmed_plant_search for full text."
+        "Retrieves GO terms, functional description, genomic location, and linked "
+        "PubMed IDs for a plant gene from Ensembl Plants and UniProt. "
+        "Related tools: genomics.ortholog_map, literature.pubmed_plant_search."
     ),
 )
 def gene_annotation(gene: str = "", species: str = "Arabidopsis thaliana", force: bool = False, **kwargs) -> dict:
@@ -1570,9 +1570,9 @@ def gene_annotation(gene: str = "", species: str = "Arabidopsis thaliana", force
         "force": "Skip species registry check (default: False)",
     },
     usage_guide=(
-        "Look up GWAS hits and phenotype/QTL evidence for a plant gene. "
-        "Arabidopsis has the richest coverage. For other species, try querying "
-        "the Arabidopsis ortholog if results are sparse."
+        "Retrieves GWAS hits and phenotype/QTL annotations for a plant gene from "
+        "the Ensembl Plants phenotype endpoint. Returns trait descriptions, sources, "
+        "associated studies, and PubMed IDs where available."
     ),
 )
 def gwas_qtl_lookup(gene: str = "", species: str = "Arabidopsis thaliana", trait: str = None, force: bool = False, **kwargs) -> dict:
@@ -1651,13 +1651,12 @@ def gwas_qtl_lookup(gene: str = "", species: str = "Arabidopsis thaliana", trait
     if not phenotypes and species_url != "arabidopsis_thaliana":
         suggestion = (
             f"No phenotype annotations found for {gene} in {binomial}. "
-            "Arabidopsis has the richest phenotype data in Ensembl Plants. "
-            "Try looking up the Arabidopsis ortholog using genomics.ortholog_map."
+            "Phenotype data coverage is limited for this species in Ensembl Plants."
         )
     elif not phenotypes:
         suggestion = (
             f"No phenotype annotations found for {gene} in Ensembl Plants. "
-            "GWAS evidence for plant traits is sparser than for human diseases."
+            "Phenotype data coverage is limited for this gene."
         )
 
     result = {
@@ -1774,9 +1773,9 @@ def _phylo_weight(taxon_a: int, taxon_b: int) -> float:
         "force": "Skip species registry check (default: False)",
     },
     usage_guide=(
-        "Map a gene to orthologs in other plant species. Use to transfer functional "
-        "knowledge across species — e.g. find the rice ortholog of an Arabidopsis gene. "
-        "Phylogenetic weight indicates evolutionary closeness (higher = more conserved)."
+        "Maps a gene to its orthologs across plant species using Ensembl Compara. "
+        "Returns ortholog gene IDs, species, orthology type, percent identity, and "
+        "a phylogenetic distance weight (higher = more closely related)."
     ),
 )
 def ortholog_map(
@@ -1896,10 +1895,7 @@ def ortholog_map(
             f"across {len(set(o['species'] for o in orthologs))} species."
         )
     else:
-        suggestion = ""
-        if target_species:
-            suggestion = " Try without target_species filter to see all available orthologs."
-        summary = f"No orthologs found for {gene} in Ensembl Plants Compara.{suggestion}"
+        summary = f"No orthologs found for {gene} in Ensembl Plants Compara."
 
     result = {
         "summary": summary,
@@ -1935,9 +1931,9 @@ def ortholog_map(
         "force": "Skip species registry check (default: False)",
     },
     usage_guide=(
-        "Extract gene structure (exons, introns, UTRs) from GFF3 annotations. "
-        "Needed for CRISPR guide design — provides exon boundaries for targeting. "
-        "Provide a local GFF3 path for speed, or let the tool auto-download."
+        "Extracts gene structure (exon positions, intron positions, UTR boundaries) "
+        "from a GFF3 genome annotation file. Accepts a local file path or "
+        "auto-downloads from Ensembl Plants FTP."
     ),
 )
 def gff_parse(
@@ -2169,15 +2165,15 @@ _ATTED_DOWNLOAD_URLS = {
     category="genomics",
     parameters={
         "gene": "Gene locus code (e.g. 'AT5G10140', 'Os01g0100100')",
-        "species": "Species (default: Arabidopsis thaliana; rice best-effort)",
+        "species": "Species (default: Arabidopsis thaliana)",
         "top_n": "Number of top co-expressed genes to return (default 20, max 100)",
         "mr_threshold": "Maximum MR score for cluster membership (default 30.0)",
         "force": "Skip species registry check (default: False)",
     },
     usage_guide=(
-        "Find genes that are co-expressed with a query gene using ATTED-II data. "
-        "MR < 5 = very strong co-expression, MR 5-30 = moderate, MR > 30 = weak. "
-        "Arabidopsis has the best coverage. Use gene locus codes (e.g. AT5G10140) not symbols."
+        "Retrieves co-expressed genes for a query gene from ATTED-II bulk data. "
+        "Returns top partners ranked by Mutual Rank (MR) score and cluster membership. "
+        "MR < 5 = very strong co-expression, MR 5-30 = moderate, MR > 30 = weak."
     ),
 )
 def coexpression_network(
@@ -2228,9 +2224,9 @@ def coexpression_network(
         if species_key not in _ATTED_DOWNLOAD_URLS:
             return {
                 "summary": (
-                    f"ATTED-II co-expression data is only available for Arabidopsis thaliana "
-                    f"and Oryza sativa (best-effort). '{binomial}' is not supported. "
-                    f"Download manually from https://atted.jp and place at {atted_file}."
+                    f"ATTED-II co-expression data coverage is limited for {binomial}. "
+                    f"Data is currently available for Arabidopsis thaliana and Oryza sativa. "
+                    f"Additional species data can be placed at {atted_file}."
                 ),
                 "gene": gene,
                 "species": binomial,
