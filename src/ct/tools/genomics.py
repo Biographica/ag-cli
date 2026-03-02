@@ -2357,3 +2357,261 @@ def coexpression_network(
     }
     set_cached("atted_coexp", cache_key, result)
     return result
+
+
+# ---------------------------------------------------------------------------
+# genomics.paralogy_score — paralogy and functional redundancy assessment
+# ---------------------------------------------------------------------------
+
+
+def _parse_orthofinder_paralogs(
+    gene: str,
+    species_col: str,
+    orthogroups_tsv: str,
+) -> list:
+    """Parse OrthoFinder Orthogroups.tsv to find paralogs.
+
+    Paralogs are genes in the same orthogroup AND the same species column
+    as the query gene.
+
+    Args:
+        gene: Query gene ID.
+        species_col: Column header matching the species in OrthoFinder output.
+        orthogroups_tsv: Path to Orthogroups.tsv file.
+
+    Returns:
+        List of paralog gene IDs (excluding the query gene itself).
+    """
+    import csv
+    from pathlib import Path
+
+    tsv_path = Path(orthogroups_tsv)
+    if not tsv_path.exists():
+        return []
+
+    try:
+        with open(tsv_path, encoding="utf-8") as fh:
+            reader = csv.DictReader(fh, delimiter="\t")
+            for row in reader:
+                species_genes_raw = row.get(species_col, "")
+                species_genes = [g.strip() for g in species_genes_raw.split(",") if g.strip()]
+                if gene in species_genes:
+                    return [g for g in species_genes if g != gene]
+    except Exception:
+        return []
+    return []
+
+
+@registry.register(
+    name="genomics.paralogy_score",
+    description=(
+        "Assess paralogy and functional redundancy for a gene: paralog count, "
+        "shared GO annotations with paralogs, and co-expression overlap. "
+        "Uses local OrthoFinder data when available, Ensembl Compara as fallback."
+    ),
+    category="genomics",
+    parameters={
+        "gene": "Gene symbol or locus code (e.g. 'FLC', 'AT5G10140')",
+        "species": "Species name (default: Arabidopsis thaliana)",
+        "orthofinder_dir": "Path to OrthoFinder results directory (optional; checks ~/.ct/orthofinder/ by default)",
+        "max_paralogs_detail": "Maximum paralogs to compute detailed GO/co-expression overlap for (default: 5)",
+        "force": "Skip species registry check (default: False)",
+    },
+    usage_guide=(
+        "Returns paralog count, shared GO annotations, and co-expression overlap "
+        "for a gene. Uses local OrthoFinder results when available, otherwise "
+        "queries Ensembl Compara paralogues endpoint."
+    ),
+)
+def paralogy_score(
+    gene: str = "",
+    species: str = "Arabidopsis thaliana",
+    orthofinder_dir: str = None,
+    max_paralogs_detail: int = 5,
+    force: bool = False,
+    **kwargs,
+) -> dict:
+    """Assess paralogy and functional redundancy for a gene."""
+    from ct.tools._species import resolve_species_taxon, resolve_species_binomial
+    from ct.tools.http_client import request_json
+    from ct.tools._api_cache import get_cached, set_cached, _CACHE_BASE
+    from pathlib import Path
+
+    # Input validation
+    gene = str(gene or "").strip()
+    if not gene:
+        return {
+            "error": "Missing required parameter: gene",
+            "summary": "paralogy_score requires a non-empty gene symbol or locus code.",
+        }
+
+    # Species validation
+    taxon_id = resolve_species_taxon(species)
+    if taxon_id == 0 and not force:
+        return {
+            "error": f"Unknown species: {species!r}. Use force=True to override.",
+            "summary": f"Species not recognised: {species!r}.",
+        }
+    binomial = resolve_species_binomial(species) or species
+
+    # Cache check
+    cache_key = f"paralogy:{taxon_id}:{gene}"
+    cached = get_cached("paralogy", cache_key)
+    if cached is not None:
+        return cached
+
+    paralogs = []
+    data_source = None
+
+    # Step 1 — Try OrthoFinder local data first
+    species_url = binomial.lower().replace(" ", "_")
+    species_col_candidates = [
+        binomial,                            # "Arabidopsis thaliana"
+        binomial.replace(" ", "_"),           # "Arabidopsis_thaliana"
+        species_url,                          # "arabidopsis_thaliana"
+    ]
+
+    of_dirs_to_check = []
+    if orthofinder_dir:
+        of_dirs_to_check.append(Path(orthofinder_dir))
+    of_dirs_to_check.append(_CACHE_BASE / "orthofinder")
+    of_dirs_to_check.append(Path.home() / ".ct" / "orthofinder")
+
+    for of_dir in of_dirs_to_check:
+        tsv_path = of_dir / "Orthogroups" / "Orthogroups.tsv"
+        if not tsv_path.exists():
+            tsv_path = of_dir / "Orthogroups.tsv"
+        if not tsv_path.exists():
+            continue
+        for col in species_col_candidates:
+            found = _parse_orthofinder_paralogs(gene, col, str(tsv_path))
+            if found:
+                paralogs = found
+                data_source = f"OrthoFinder ({tsv_path})"
+                break
+        if paralogs:
+            break
+
+    # Step 2 — Ensembl Compara fallback (if no OrthoFinder data)
+    if not paralogs:
+        ensembl_base = "https://rest.ensembl.org"
+
+        # Resolve gene to Ensembl ID
+        gene_data, err = request_json(
+            "GET",
+            f"{ensembl_base}/lookup/symbol/{species_url}/{gene}",
+            params={"content-type": "application/json"},
+            timeout=15,
+            retries=2,
+        )
+        ensembl_id = ""
+        if not err and gene_data:
+            ensembl_id = gene_data.get("id", "")
+
+        if ensembl_id:
+            params = {
+                "content-type": "application/json",
+                "type": "paralogues",    # British spelling — CRITICAL
+                "compara": "plants",     # CRITICAL — never use vertebrates default
+                "format": "condensed",
+            }
+            homology_data, hom_err = request_json(
+                "GET",
+                f"{ensembl_base}/homology/id/{species_url}/{ensembl_id}",
+                params=params,
+                timeout=30,
+                retries=2,
+            )
+            if not hom_err and homology_data:
+                homologies = (homology_data or {}).get("data", [{}])[0].get("homologies", [])
+                for entry in homologies:
+                    target = entry.get("target", {})
+                    target_id = target.get("id", "")
+                    if target_id:
+                        paralogs.append(target_id)
+                data_source = "Ensembl Compara"
+            elif hom_err:
+                data_source = f"Ensembl Compara (error: {hom_err})"
+            else:
+                data_source = "Ensembl Compara"
+        elif err:
+            data_source = f"Ensembl (gene lookup error: {err})"
+        else:
+            data_source = "Ensembl (gene not found)"
+
+    # Step 3 — Compute shared GO annotations and co-expression overlap (for top N paralogs)
+    max_detail = min(int(max_paralogs_detail), 10)
+    detail_paralogs = paralogs[:max_detail]
+    paralog_details = []
+
+    if detail_paralogs:
+        # Get query gene's GO terms
+        query_go_result = gene_annotation(gene=gene, species=species, force=force)
+        query_go_ids = set()
+        for go in query_go_result.get("go_terms", []):
+            go_id = go.get("go_id", "")
+            if go_id:
+                query_go_ids.add(go_id)
+
+        # Get query gene's co-expression partners
+        query_coexp_result = coexpression_network(gene=gene, species=species, force=force)
+        query_partners = set()
+        for partner in query_coexp_result.get("coexpressed_genes", []):
+            p = partner.get("partner", "")
+            if p:
+                query_partners.add(p)
+
+        for paralog_id in detail_paralogs:
+            detail = {"paralog_id": paralog_id}
+
+            # Shared GO annotations
+            para_go_result = gene_annotation(gene=paralog_id, species=species, force=force)
+            para_go_ids = set()
+            for go in para_go_result.get("go_terms", []):
+                go_id = go.get("go_id", "")
+                if go_id:
+                    para_go_ids.add(go_id)
+
+            shared_go = query_go_ids & para_go_ids
+            detail["shared_go_count"] = len(shared_go)
+            detail["shared_go_ids"] = sorted(shared_go)
+            detail["paralog_go_count"] = len(para_go_ids)
+
+            # Co-expression overlap
+            para_coexp_result = coexpression_network(gene=paralog_id, species=species, force=force)
+            para_partners = set()
+            for partner in para_coexp_result.get("coexpressed_genes", []):
+                p = partner.get("partner", "")
+                if p:
+                    para_partners.add(p)
+
+            shared_partners = query_partners & para_partners
+            detail["coexpression_overlap_count"] = len(shared_partners)
+            detail["coexpression_overlap_genes"] = sorted(shared_partners)[:20]  # cap at 20
+
+            paralog_details.append(detail)
+
+    # Build result
+    if paralogs:
+        summary = (
+            f"Found {len(paralogs)} paralog(s) for {gene} in {binomial} "
+            f"(source: {data_source})."
+        )
+    else:
+        summary = (
+            f"No paralogs found for {gene} in {binomial}. "
+            "Paralogy data coverage is limited for this gene."
+        )
+
+    result = {
+        "summary": summary,
+        "gene": gene,
+        "species": binomial,
+        "taxon_id": taxon_id,
+        "paralog_count": len(paralogs),
+        "paralogs": paralogs,
+        "data_source": data_source,
+        "paralog_details": paralog_details,
+    }
+    set_cached("paralogy", cache_key, result)
+    return result
