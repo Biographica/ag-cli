@@ -82,6 +82,3 @@ Local datasets are optional — Harvest works out of the box using 15+ database 
 - **Editability regulatory scoring** — The regulatory/epigenetic layer of editability assessment is a stub; currently returns structural and paralogy metrics only.
 - **Off-target scanning** — CRISPR off-target detection uses regex-based PAM matching, not full genome alignment.
 
-## License
-
-MIT — see [LICENSE](LICENSE)
