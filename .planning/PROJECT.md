@@ -24,27 +24,29 @@ Given a gene longlist and project spec, produce a ranked shortlist of gene × ed
 - ✓ Report generation (markdown + branded HTML export) — existing
 - ✓ Config system (JSON config, CLI management) — existing
 - ✓ Interactive terminal UI — existing
+- ✓ Runtime domain-based tool filtering (pharma tools hidden at MCP layer) — v1.0
+- ✓ Plant science system prompt with Harvest identity — v1.0
+- ✓ Local-first data loader pattern with manifest system — v1.0
+- ✓ PlantExp RNA-seq expression data loader — v1.0
+- ✓ Species-agnostic architecture with YAML-backed registry — v1.0
+- ✓ Organism validation middleware (@validate_species decorator) — v1.0
+- ✓ STRING plant PPI network connector — v1.0
+- ✓ PubMed plant search with species-specific query construction — v1.0
+- ✓ Lens.org patent landscape search — v1.0
+- ✓ Gene annotation lookup (GO terms, function, publications) — v1.0
+- ✓ Ortholog mapping with phylogenetic distance weighting — v1.0
+- ✓ Co-expression network analysis (cluster membership, centrality, enrichment) — v1.0
+- ✓ GFF3 genome annotation parsing — v1.0
+- ✓ GWAS/QTL evidence lookup — v1.0
+- ✓ CRISPR guide design (PAM scanning, guide scoring, off-target prediction) — v1.0
+- ✓ Editability scoring (gene structure, guide availability) — v1.0
+- ✓ Paralogy and functional redundancy scoring — v1.0
+- ✓ Multi-species evidence gathering orchestration — v1.0
+- ✓ Open-ended plant science Q&A capability — v1.0
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
-
-**Milestone 1: Working Plant Science Agent**
-- [ ] Runtime domain-based tool filtering (ag-cli exposes only plant-relevant tools, pharma tools hidden at runtime)
-- [ ] Plant science system prompt replacing oncology domain knowledge
-- [ ] Local-first data loader pattern (bulk-downloaded, curated datasets from local folders)
-- [ ] PlantExp RNA-seq data loader (expression data across species/tissues/conditions)
-- [ ] Ensembl Plants data loader (gene models, orthologs, variation, cross-species)
-- [ ] STRING plant PPI network data loader
-- [ ] TAIR / Gramene annotation data loaders
-- [ ] Plant genomics tools (GFF parsing, plant GWAS/QTL lookup, ortholog mapping)
-- [ ] Co-expression analysis tools (network construction, cluster analysis, centrality metrics)
-- [ ] Gene editing assessment tools (CRISPR guide design, PAM analysis, editability scoring)
-- [ ] Literature tools adapted for plant science (plant-specific PubMed queries, patent search)
-- [ ] Organism validation middleware (species consistency checks on data access)
-- [ ] Species-agnostic architecture (works with any plant species that has data)
-- [ ] Open-ended plant science Q&A capability
-- [ ] Evidence gathering across species for a given gene list
 
 **Milestone 2: Shortlisting Pipeline Framework**
 - [ ] Pipeline stage orchestration (target construction → evidence aggregation → scoring → ranking → dossier)
@@ -81,11 +83,16 @@ Given a gene longlist and project spec, produce a ranked shortlist of gene × ed
 - Regulatory submission pipeline — potential future framework, not this project
 - Dagster backend integration — eventual goal, not M1 or M2 (local-first data pattern for now)
 - Two-repo separation — one repo with clean internal separation; extract when a second framework is needed
-- Deletion of pharma tools from codebase — runtime filtering instead; keep for potential cross-domain use
+- Deletion of pharma tools from codebase — runtime filtering works well (validated in v1.0); keep for potential cross-domain use
+- Bespoke data download/cleaning scripts per database — Dagster backend handles data curation; ag-cli reads from local folders
+- Full Bowtie2 off-target alignment for CRISPR — regex mismatch scan sufficient for M1; genome indexing pipeline deferred
+- Ensembl Plants bulk data loader (separate from REST API tools) — REST API sufficient for v1.0 tool suite; bulk loader needed for pipeline scale
 
 ## Context
 
-**Forked from:** [celltype/cli](https://github.com/celltype/cli/tree/main) — a Claude Code-style agentic research tool for biomedical tasks. Provides a production-grade agentic architecture (Claude Agent SDK + MCP + tool registry + sandbox + session management + reporting). Currently optimised for human oncology drug discovery with ~191 tools, ~60 of which are pharma-specific and should be hidden at runtime for ag use.
+**Current state (post v1.0):** 43,524 LOC Python (src/), 19,299 LOC tests. 15+ plant science tools across 5 categories (genomics, editing, interactions, literature, data). 20+ supported plant species via YAML registry. Tech stack: Python, Claude Agent SDK, MCP protocol, PyYAML, gffutils. 139 tests passing (3 e2e gated behind `--run-e2e`).
+
+**Forked from:** [celltype/cli](https://github.com/celltype/cli/tree/main) — a Claude Code-style agentic research tool for biomedical tasks. Provides a production-grade agentic architecture (Claude Agent SDK + MCP + tool registry + sandbox + session management + reporting). Pharma-specific tools (~60) are hidden at runtime via MCP-layer allowlist filtering.
 
 **Architectural analogy:** celltype-cli : ag-cli :: Claude Code : Claude Code (domain swap). GSD : Claude Code :: shortlisting framework : ag-cli (opinionated workflow layer).
 
@@ -135,16 +142,19 @@ src/
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Fork celltype-cli rather than build from scratch | Proven agentic architecture (SDK, MCP, tools, sandbox) saves months of infrastructure work | — Pending |
-| One repo with two internal packages | Avoids premature two-repo overhead while maintaining clean separation for eventual extraction | — Pending |
-| Runtime tool filtering rather than tool deletion | Keeps optionality for cross-domain use; simpler than managing deleted code | — Pending |
-| Local-first data access pattern | Avoids API throttling, enables curation, matches existing data workflow with Dagster backend | — Pending |
-| Species-agnostic from day one | Avoids costly refactoring later; real customers work across crop species | — Pending |
-| Pseudo-Bayesian evidence integration (from product spec) | Balances interpretability, configurability, and robustness; avoids intractable probabilistic models | — Pending |
-| Scoring as deterministic code, not agent judgement | Prevents hallucination in quantitative outputs; agent plans the pipeline, code executes it | — Pending |
-| Data loaders read from local curated folders, not download/clean | Dagster backend handles data curation; ag-cli loaders just read from local folders with manifests | — Pending |
-| Multi-species tool signatures supported | Comparative genomics tools take source_species + target_species (or lists); single-species tools take species; species-agnostic tools make species optional. "No hardcoded species" is the constraint, not "every tool takes exactly one species" | — Pending |
-| Engine API must support meta-prompting layers | ag-cli's tool registry, agent runner, and MCP server are public interfaces. Future workflow frameworks (shortlisting, field trial design, etc.) can register skills (/shortlist:plan, etc.) on top of ag-cli the same way GSD layers on Claude Code | — Pending |
+| Fork celltype-cli rather than build from scratch | Proven agentic architecture (SDK, MCP, tools, sandbox) saves months of infrastructure work | ✓ Good — v1.0 shipped in 7 days; agentic loop, MCP server, sandbox, session mgmt all inherited |
+| One repo with two internal packages | Avoids premature two-repo overhead while maintaining clean separation for eventual extraction | — Pending (shortlist/ not yet built) |
+| Runtime tool filtering rather than tool deletion | Keeps optionality for cross-domain use; simpler than managing deleted code | ✓ Good — PLANT_SCIENCE_CATEGORIES allowlist works cleanly; pharma tools invisible to agent |
+| Local-first data access pattern | Avoids API throttling, enables curation, matches existing data workflow with Dagster backend | ✓ Good — manifest system + local loaders work well; REST API tools complement for external data |
+| Species-agnostic from day one | Avoids costly refactoring later; real customers work across crop species | ✓ Good — YAML registry + @validate_species handle 20+ species; required 2 integration-fix phases |
+| Pseudo-Bayesian evidence integration (from product spec) | Balances interpretability, configurability, and robustness; avoids intractable probabilistic models | — Pending (v2.0 scope) |
+| Scoring as deterministic code, not agent judgement | Prevents hallucination in quantitative outputs; agent plans the pipeline, code executes it | — Pending (v2.0 scope) |
+| Data loaders read from local curated folders, not download/clean | Dagster backend handles data curation; ag-cli loaders just read from local folders with manifests | ✓ Good — works for expression data; PlantExp URLs pending S3 confirmation |
+| Multi-species tool signatures supported | Comparative genomics tools take source_species + target_species (or lists); single-species tools take species; species-agnostic tools make species optional | ✓ Good — ortholog_map uses source+target; paralogy_score single species; evidence gathering multi-species |
+| Engine API must support meta-prompting layers | ag-cli's tool registry, agent runner, and MCP server are public interfaces | — Pending (shortlist framework will test this) |
+| YAML-backed species registry (v1.0) | Single source of truth for species metadata; eliminates drift between inline dicts | ✓ Good — resolved 2 integration issues caused by duplicated species maps |
+| MCP-layer allowlist filtering (v1.0) | Agent never sees pharma tools (not soft filter) — prevents wasted turns | ✓ Good — no pharma tool leakage observed in any UAT |
+| Disk TTL cache for API responses (v1.0) | Avoids re-fetching from STRING/PubMed/Ensembl during iterative research | ✓ Good — shared across all Phase 3-5 tools |
 
 ---
-*Last updated: 2026-02-25 after roadmap creation*
+*Last updated: 2026-03-02 after v1.0 milestone*
