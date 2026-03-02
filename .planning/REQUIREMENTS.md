@@ -37,7 +37,7 @@ Requirements for Milestone 1: Working Plant Science Agent.
 - [x] **TOOL-06**: User can assess CRISPR guide design (PAM sites, guide scoring, off-target prediction) for a gene
 - [x] **TOOL-07**: User can estimate editability of a gene based on gene structure, guide availability, and regulatory complexity
 - [x] **TOOL-08**: User can score paralogy/functional redundancy for a gene (paralog count, co-expression overlap, shared annotations)
-- [ ] **TOOL-09**: User can gather evidence across species for a given gene list (multi-species evidence collection orchestrated by agent)
+- [x] **TOOL-09**: User can gather evidence across species for a given gene list (multi-species evidence collection orchestrated by agent)
 
 ## v2 Requirements
 
@@ -115,7 +115,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOOL-06 | Phase 5 | Complete |
 | TOOL-07 | Phase 5 | Complete |
 | TOOL-08 | Phase 5 | Complete |
-| TOOL-09 | Phase 5 | Pending |
+| TOOL-09 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 20 total
