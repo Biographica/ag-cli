@@ -24,7 +24,7 @@ def pytest_collection_modifyitems(config, items):
     # Skip e2e tests by default
     skip_e2e = pytest.mark.skip(reason="Need --run-e2e to run")
     for item in items:
-        if "test_e2e" in item.nodeid or "e2e" in item.keywords:
+        if "e2e" in item.keywords:
             item.add_marker(skip_e2e)
 
 
