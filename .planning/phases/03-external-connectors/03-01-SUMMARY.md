@@ -35,6 +35,7 @@ metrics:
   tasks_completed: 2
   files_created: 4
   files_modified: 2
+requirements-completed: [CONN-01]
 ---
 
 # Phase 03 Plan 01: Disk Cache + STRING Plant PPI Connector Summary

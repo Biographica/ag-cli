@@ -38,6 +38,7 @@ metrics:
   tasks_completed: 2
   tasks_total: 2
   files_modified: 2
+requirements-completed: []
 ---
 
 # Phase 04 Plan 04: Messaging Alignment Summary

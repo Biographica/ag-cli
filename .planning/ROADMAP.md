@@ -17,10 +17,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - Fork setup, plant system prompt, runtime pharma tool filtering, and rebranding (completed 2026-02-25)
 - [x] **Phase 2: Data Infrastructure** - Local-first data loader pattern, species registry, manifest system, organism validation (gap closure in progress) (completed 2026-02-25)
 - [x] **Phase 2.1: Integration Fixes** - INSERTED — Fix cross-phase wiring issues found by milestone audit (species default form, parity YAML backing, stale branding) (completed 2026-02-26)
-- [ ] **Phase 2.2: Integration Fixes II** - INSERTED — Fix CLI routing bug for species subcommand and missing PyYAML dependency found by re-audit
+- [x] **Phase 2.2: Integration Fixes II** - INSERTED — Fix CLI routing bug for species subcommand and missing PyYAML dependency found by re-audit (completed 2026-02-26)
 - [x] **Phase 3: External Connectors** - STRING, PubMed, and Lens.org API connectors with plant-specific query construction (completed 2026-02-26)
 - [x] **Phase 4: Plant Genomics Tools** - Gene annotation, ortholog mapping, co-expression analysis, GFF parsing, GWAS/QTL lookup (completed 2026-02-28)
-- [ ] **Phase 5: Gene Editing and Evidence Tools** - CRISPR guide design, editability scoring, paralogy scoring, multi-species evidence gathering
+- [x] **Phase 5: Gene Editing and Evidence Tools** - CRISPR guide design, editability scoring, paralogy scoring, multi-species evidence gathering (completed 2026-03-02)
 
 ## Phase Details
 
@@ -82,7 +82,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02.2-01-PLAN.md — Fix species CLI routing and add PyYAML dependency (DATA-01, DATA-02, DATA-04)
+- [x] 02.2-01-PLAN.md — Fix species CLI routing and add PyYAML dependency (DATA-01, DATA-02, DATA-04)
 
 ### Phase 3: External Connectors
 **Goal**: The agent can query STRING plant PPI networks, search PubMed with plant-specific queries, and retrieve patent data from Lens.org as evidence sources in a research workflow
@@ -95,8 +95,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Disk cache helper, STRING plant PPI connector, config registration (CONN-01)
-- [ ] 03-02-PLAN.md — PubMed plant search, Lens.org patent search, MCP hiding (CONN-02, CONN-03)
+- [x] 03-01-PLAN.md — Disk cache helper, STRING plant PPI connector, config registration (CONN-01)
+- [x] 03-02-PLAN.md — PubMed plant search, Lens.org patent search, MCP hiding (CONN-02, CONN-03)
 
 ### Phase 4: Plant Genomics Tools
 **Goal**: The agent can look up gene annotations, map orthologs across species, analyse co-expression networks, parse genome annotations, and retrieve GWAS/QTL evidence — giving it the genomics reasoning capability needed for plant target research
@@ -111,9 +111,10 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 04-01: Gene annotation and GWAS/QTL lookup tools
-- [ ] 04-02: Ortholog mapping with phylogenetic distance weighting
-- [ ] 04-03: GFF3 parsing and co-expression network tools
+- [x] 04-01: Gene annotation and GWAS/QTL lookup tools
+- [x] 04-02: Ortholog mapping with phylogenetic distance weighting
+- [x] 04-03: GFF3 parsing and co-expression network tools
+- [x] 04-04-PLAN.md — Tool messaging alignment
 
 ### Phase 5: Gene Editing and Evidence Tools
 **Goal**: The agent can assess CRISPR guide design and editability for any gene, score paralogy and functional redundancy risk, and orchestrate multi-species evidence collection across the full M1 tool suite for a provided gene list
@@ -127,9 +128,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 05-01: CRISPR guide design and editability scoring tools
-- [ ] 05-02: Paralogy scoring tool
-- [ ] 05-03: Multi-species evidence gathering orchestration (TOOL-09)
+- [x] 05-01: CRISPR guide design and editability scoring tools
+- [x] 05-02: Paralogy scoring tool
+- [x] 05-03: Multi-species evidence gathering orchestration (TOOL-09)
 
 ## Progress
 
@@ -141,7 +142,7 @@ Phases execute in numeric order: 1 -> 2 -> 2.1 -> 2.2 -> 3 -> 4 -> 5
 | 1. Foundation | 2/2 | Complete    | 2026-02-25 |
 | 2. Data Infrastructure | 4/4 | Complete   | 2026-02-25 |
 | 2.1 Integration Fixes | 1/1 | Complete | 2026-02-26 |
-| 2.2 Integration Fixes II | 0/1 | Not started | - |
+| 2.2 Integration Fixes II | 1/1 | Complete | 2026-02-26 |
 | 3. External Connectors | 2/2 | Complete   | 2026-02-26 |
 | 4. Plant Genomics Tools | 4/4 | Complete   | 2026-03-01 |
-| 5. Gene Editing and Evidence Tools | 1/3 | In Progress|  |
+| 5. Gene Editing and Evidence Tools | 3/3 | Complete | 2026-03-02 |

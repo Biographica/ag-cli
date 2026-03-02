@@ -35,6 +35,7 @@ metrics:
   completed: "2026-03-02"
   tasks_completed: 2
   files_modified: 2
+requirements-completed: [TOOL-08]
 ---
 
 # Phase 05 Plan 02: Paralogy Score Tool Summary

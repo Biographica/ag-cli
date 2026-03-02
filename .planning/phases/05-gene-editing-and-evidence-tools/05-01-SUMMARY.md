@@ -39,6 +39,7 @@ metrics:
   tasks_total: 3
   files_created: 5
   files_modified: 1
+requirements-completed: [TOOL-06, TOOL-07]
 ---
 
 # Phase 05 Plan 01: Shell Executor and CRISPR Guide Design Tools Summary

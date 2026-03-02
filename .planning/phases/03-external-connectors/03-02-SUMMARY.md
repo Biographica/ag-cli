@@ -39,6 +39,7 @@ metrics:
   tasks_completed: 2
   files_created: 2
   files_modified: 2
+requirements-completed: [CONN-02, CONN-03]
 ---
 
 # Phase 03 Plan 02: PubMed Plant Search + Lens.org Patent Search Summary
