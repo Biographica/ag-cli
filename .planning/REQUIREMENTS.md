@@ -34,8 +34,8 @@ Requirements for Milestone 1: Working Plant Science Agent.
 - [x] **TOOL-03**: User can run co-expression network analysis (cluster membership, centrality, enrichment) from expression data
 - [x] **TOOL-04**: User can parse GFF3 genome annotations and extract gene structure information
 - [x] **TOOL-05**: User can look up GWAS/QTL evidence for trait-gene associations
-- [ ] **TOOL-06**: User can assess CRISPR guide design (PAM sites, guide scoring, off-target prediction) for a gene
-- [ ] **TOOL-07**: User can estimate editability of a gene based on gene structure, guide availability, and regulatory complexity
+- [x] **TOOL-06**: User can assess CRISPR guide design (PAM sites, guide scoring, off-target prediction) for a gene
+- [x] **TOOL-07**: User can estimate editability of a gene based on gene structure, guide availability, and regulatory complexity
 - [ ] **TOOL-08**: User can score paralogy/functional redundancy for a gene (paralog count, co-expression overlap, shared annotations)
 - [ ] **TOOL-09**: User can gather evidence across species for a given gene list (multi-species evidence collection orchestrated by agent)
 
@@ -112,8 +112,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOOL-03 | Phase 4 | Complete |
 | TOOL-04 | Phase 4 | Complete |
 | TOOL-05 | Phase 4 | Complete |
-| TOOL-06 | Phase 5 | Pending |
-| TOOL-07 | Phase 5 | Pending |
+| TOOL-06 | Phase 5 | Complete |
+| TOOL-07 | Phase 5 | Complete |
 | TOOL-08 | Phase 5 | Pending |
 | TOOL-09 | Phase 5 | Pending |
 
