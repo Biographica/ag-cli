@@ -20,6 +20,7 @@ EXPERIMENTAL_CATEGORIES = frozenset({"compute", "cro"})
 # which is safer than a blocklist for a new domain.
 PLANT_SCIENCE_CATEGORIES = frozenset({
     "genomics",
+    "editing",
     "network",
     "literature",
     "data_api",
@@ -83,6 +84,7 @@ _TOOL_MODULES = (
     "remote_data",
     "plant_data",
     "interactions",
+    "editing",
 )
 
 
