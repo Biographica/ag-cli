@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T14:52:00.000Z"
+last_updated: "2026-03-02T15:13:08.656Z"
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 6
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 17
+  completed_plans: 16
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 05 of 6 (Gene Editing and Evidence Tools — in progress)
-Plan: 1 of 3 in current phase (complete)
-Status: Plan 05-01 complete — _local_tools.py shell executor, editing.crispr_guide_design, editing.editability_score; 40 new tests pass
-Last activity: 2026-03-02 — Plan 05-01 complete: shell executor utility, CRISPR guide design (SpCas9/Cas12a), editability score aggregator
+Plan: 2 of 3 in current phase (complete)
+Status: Plan 05-02 complete — genomics.paralogy_score with OrthoFinder-first/Ensembl-Compara fallback, GO/co-expression overlap detail; 12 new tests pass
+Last activity: 2026-03-02 — Plan 05-02 complete: paralogy scoring tool (TOOL-08), OrthoFinder Orthogroups.tsv parser, Ensembl Compara paralogues endpoint
 
 Progress: [██████████] 100%
 
@@ -53,6 +53,7 @@ Progress: [██████████] 100%
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 05 P02 | 7 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - [Phase 05-gene-editing-and-evidence-tools 05-01]: SpCas9 PAM scanning uses re lookahead (?=(...)) to capture overlapping NGG matches — standard regex misses adjacent PAMs sharing a nucleotide
 - [Phase 05-gene-editing-and-evidence-tools 05-01]: Off-target regex mismatch scan used for M1 even when aligner present — full Bowtie2 pipeline requires genome indexing, deferred to future plan
 - [Phase 05-gene-editing-and-evidence-tools 05-01]: editability_score regulatory_complexity_score returns None for M1 — explicitly documented stub; callers treat None as data-unavailable
+- [Phase 05-gene-editing-and-evidence-tools 05-02]: OrthoFinder Orthogroups.tsv parsed via stdlib csv.DictReader — no pandas dependency; reads incrementally, stops at first match
+- [Phase 05-gene-editing-and-evidence-tools 05-02]: Sub-calls to gene_annotation and coexpression_network use direct function calls (not registry) — same module, no lookup overhead, easier to mock in tests
+- [Phase 05-gene-editing-and-evidence-tools 05-02]: compara=plants hardcoded in paralogy_score params dict (same pattern as ortholog_map) — prevents accidental omission on paralogues endpoint
 
 ### Pending Todos
 
@@ -119,5 +123,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 05-01-PLAN.md — shell executor utility, CRISPR guide design (SpCas9/Cas12a), editability score aggregator; 40 new tests pass
+Stopped at: Completed 05-02-PLAN.md — genomics.paralogy_score with OrthoFinder-first/Ensembl-Compara fallback; 12 new tests pass
 Resume file: None
