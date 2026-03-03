@@ -24,7 +24,7 @@ Harvest takes natural language questions about genes, species, and traits — th
 ## Quick Start
 
 ```bash
-pip install -e .
+uv sync               # install from lockfile
 ag setup              # configure API key
 ag "your question"    # single query
 ag                    # interactive mode

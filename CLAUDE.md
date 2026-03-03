@@ -60,7 +60,7 @@ ct tool list                    # List all tools
 ct config set key value         # Set config
 ct data pull depmap             # Download dataset
 pytest tests/ -v                # Run tests
-pip install -e ".[dev]"         # Install for development
+uv sync --extra dev             # Install for development
 ```
 
 ## Testing

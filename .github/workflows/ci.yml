@@ -16,14 +16,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - uses: astral-sh/setup-uv@v4
       - name: Install package + test deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv sync --extra dev
       - name: Run unit/regression suite
-        run: pytest tests/ -q -m "not api_smoke"
+        run: uv run pytest tests/ -q -m "not api_smoke"
       - name: Run benchmark release gate
-        run: ct knowledge benchmark --strict --min-pass-rate 0.9
+        run: uv run ct knowledge benchmark --strict --min-pass-rate 0.9
 
   api-smoke:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -33,15 +32,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - uses: astral-sh/setup-uv@v4
       - name: Install package + test deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv sync --extra dev
       - name: Run live API smoke checks
         env:
           CT_RUN_API_SMOKE: "1"
           CT_API_SMOKE_STRICT: "1"
-        run: pytest tests/test_api_smoke.py -q
+        run: uv run pytest tests/test_api_smoke.py -q
 
   pharma-ready-gate:
     if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && secrets.ANTHROPIC_API_KEY != ''
@@ -52,10 +50,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - uses: astral-sh/setup-uv@v4
       - name: Install package + test deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+        run: uv sync --extra dev
       - name: Run strict live pharma-ready prompt matrix
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -64,4 +61,4 @@ jobs:
           CT_E2E_MATRIX_LIMIT: "10"
           CT_E2E_MAX_ITER: "2"
           CT_E2E_MODEL: "claude-sonnet-4-5-20250929"
-        run: pytest tests/test_e2e_matrix.py -q --run-e2e
+        run: uv run pytest tests/test_e2e_matrix.py -q --run-e2e

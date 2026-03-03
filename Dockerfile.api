@@ -1,11 +1,13 @@
 FROM python:3.11-slim
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 WORKDIR /app
 
-COPY pyproject.toml README.md ./
+COPY pyproject.toml uv.lock README.md ./
 COPY src/ src/
 
-RUN pip install --no-cache-dir -e ".[api]"
+RUN uv sync --extra api
 
 EXPOSE 8000
 
@@ -13,4 +15,4 @@ EXPOSE 8000
 VOLUME /data
 ENV CT_DATA_ROOT=/data
 
-CMD ["uvicorn", "ct.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "ct.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
