@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "ag-cli"
 version = "0.1.0"
-description = "ag-cli — An autonomous plant science research agent"
+description = "Ag — An autonomous plant science research agent"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Biographica" },
+    { name = "Dominic Hall (dominic@graphica.bio)" },
 ]
 
 dependencies = [
