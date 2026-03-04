@@ -51,7 +51,10 @@ SLASH_COMMANDS = {
     "/compact": "Compress session context for longer runs",
     "/agents": "Run a query with N parallel research agents",
     "/sessions": "List recent saved sessions",
-    "/resume": "Resume a previous session by id/index",
+    "/resume": "Resume a previous session by id/name/index",
+    "/name": "Set or display session name",
+    "/output": "Display current output directory",
+    "/workdir": "Display or set working directory",
     "/case-study": "Run/list curated case studies (/case-study list)",
     "/plan": "Toggle plan mode — preview & approve before executing",
     "/clear": "Clear the screen",
@@ -656,7 +659,15 @@ class InteractiveTerminal:
         plan = '<style fg="#555555">  </style><style fg="#1a1a2e" bg="#ff79c6"> plan mode </style>' if self.session.config.get("agent.plan_preview", False) else ""
         return HTML(f'  <style fg="#ffffff" bg="#50a0ff"> {model} </style>{verbose}{plan}<style fg="#555555">  ? for commands  ·  Ctrl+O verbose</style>')
 
-    def run(self, initial_context: dict = None, resume_id: str = None):
+    def run(
+        self,
+        initial_context: dict = None,
+        resume_id: str = None,
+        session_name: str = None,
+        session_output_dir: str = None,
+        session_working_dir: str = None,
+        session_temp: bool = False,
+    ):
         """Run the interactive session."""
         from ct.agent.loop import AgentLoop
 
@@ -678,7 +689,20 @@ class InteractiveTerminal:
                 self.console.print(f"  [yellow]{e}[/yellow]")
                 self.agent = AgentLoop(self.session)
         else:
-            self.agent = AgentLoop(self.session)
+            self.agent = AgentLoop(
+                self.session,
+                name=session_name,
+                output_dir=session_output_dir,
+                working_dir=session_working_dir,
+                temp=session_temp,
+            )
+
+        # Print session info line with optional name
+        sid = self.agent.session_id
+        out = self.agent.output_dir
+        name_part = f" ({self.agent.session_info.name})" if self.agent.session_info.name else ""
+        self.console.print(f"  [dim]Session {sid}{name_part} · outputs → {out}[/dim]")
+        self.console.print()
 
         while True:
             try:
@@ -802,6 +826,33 @@ class InteractiveTerminal:
                 sid = parts[1].strip() if len(parts) > 1 else None
                 self._resume_session(sid)
                 continue
+            if cmd.startswith("/name"):
+                parts = query.split(maxsplit=1)
+                new_name = parts[1].strip() if len(parts) > 1 else None
+                if new_name:
+                    self.agent.session_info.set_name(new_name)
+                    self.console.print(f"  [green]Session named:[/green] {new_name}")
+                else:
+                    current = self.agent.session_info.name
+                    if current:
+                        self.console.print(f"  [cyan]Session name:[/cyan] {current}")
+                    else:
+                        self.console.print("  [dim]No name set. Usage: /name <name>[/dim]")
+                continue
+            if cmd in ("output", "/output"):
+                self.console.print(f"  [cyan]Output directory:[/cyan] {self.agent.output_dir}")
+                continue
+            if cmd.startswith("/workdir"):
+                parts = query.split(maxsplit=1)
+                new_dir = parts[1].strip() if len(parts) > 1 else None
+                if new_dir:
+                    resolved = str(Path(new_dir).expanduser().resolve())
+                    self.agent.session_info.working_dir = resolved
+                    self.agent.session_info._save()
+                    self.console.print(f"  [green]Working directory set:[/green] {resolved}")
+                else:
+                    self.console.print(f"  [cyan]Working directory:[/cyan] {self.agent.session_info.working_dir}")
+                continue
             if cmd.startswith("/agents"):
                 self._handle_agents_command(query, context)
                 continue
@@ -846,6 +897,49 @@ class InteractiveTerminal:
             if result is not None:
                 self._last_response = result.summary
                 self._update_suggestions(query, result.plan, result)
+
+        # Session exit — handle temp cleanup or mark completed
+        self._handle_session_exit()
+
+    def _handle_session_exit(self):
+        """Handle session cleanup on exit: temp discard or status update."""
+        import shutil
+
+        if not hasattr(self, 'agent') or not hasattr(self.agent, 'session_info'):
+            return
+
+        info = self.agent.session_info
+
+        if info.temp:
+            try:
+                choice = input("  Keep session artifacts? [y/N] ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                choice = "n"
+
+            if choice in ("y", "yes"):
+                try:
+                    dest = input("  Destination path [press Enter for current dir]: ").strip()
+                except (EOFError, KeyboardInterrupt):
+                    dest = ""
+                dest_path = Path(dest) if dest else Path.cwd() / info.session_id
+                dest_path.mkdir(parents=True, exist_ok=True)
+                # Copy files from session dir
+                for item in info.session_dir.iterdir():
+                    target = dest_path / item.name
+                    if item.is_file():
+                        shutil.copy2(item, target)
+                    elif item.is_dir():
+                        shutil.copytree(item, target, dirs_exist_ok=True)
+                self.console.print(f"  [green]Saved to[/green] {dest_path}")
+
+            # Remove temp session directory
+            try:
+                shutil.rmtree(info.session_dir)
+                self.console.print("  [dim]Temp session cleaned up.[/dim]")
+            except OSError:
+                pass
+        else:
+            info.set_status("completed")
 
     def _run_with_clarification(self, query: str, context: dict):
         """Run a query, handling clarification requests interactively."""
@@ -1258,17 +1352,31 @@ class InteractiveTerminal:
 
         self.console.print(f"\n  [cyan]Recent sessions:[/cyan]\n")
         for i, s in enumerate(sessions[:10], 1):
-            title = s.get("title", "untitled")[:60]
+            # Prefer name, fall back to title
+            display_name = s.get("name") or s.get("title") or "untitled"
+            display_name = display_name[:60]
             sid = s.get("session_id", "?")
             n = s.get("n_turns", 0)
-            ts = time.strftime("%Y-%m-%d %H:%M", time.localtime(s.get("created_at", 0)))
-            current = " [green]*[/green]" if hasattr(self, 'agent') and self.agent.trajectory.session_id == sid else "  "
-            self.console.print(f"  {current}[{i}] [bold]{sid}[/bold] — {title} ({n} turns, {ts})")
 
-        self.console.print(f"\n  [dim]Use /resume <id> or /resume <number> to restore.[/dim]")
+            # Handle both ISO string and Unix float timestamps
+            created = s.get("created_at", 0)
+            if isinstance(created, str) and created:
+                try:
+                    from datetime import datetime as _dt
+                    dt = _dt.fromisoformat(created)
+                    ts = dt.strftime("%Y-%m-%d %H:%M")
+                except (ValueError, TypeError):
+                    ts = created[:16]
+            else:
+                ts = time.strftime("%Y-%m-%d %H:%M", time.localtime(created or 0))
+
+            current = " [green]*[/green]" if hasattr(self, 'agent') and self.agent.session_id == sid else "  "
+            self.console.print(f"  {current}[{i}] [bold]{sid}[/bold] — {display_name} ({n} turns, {ts})")
+
+        self.console.print(f"\n  [dim]Use /resume <id|name|number> to restore.[/dim]")
 
     def _resume_session(self, identifier: str = None):
-        """Resume a previous session."""
+        """Resume a previous session by ID, name, or list index."""
         from ct.agent.loop import AgentLoop
         from ct.agent.trajectory import Trajectory
 
@@ -1290,7 +1398,7 @@ class InteractiveTerminal:
                 return
             identifier = choice
 
-        # Resolve: number → session from list, or direct ID
+        # Resolve: number → session from list, or direct ID/name
         if identifier.isdigit():
             idx = int(identifier) - 1
             if 0 <= idx < len(sessions):
@@ -1301,13 +1409,16 @@ class InteractiveTerminal:
         elif identifier == "last":
             session_id = sessions[0]["session_id"]
         else:
+            # Could be a name or ID — AgentLoop._resolve_session_id handles both
             session_id = identifier
 
         try:
             self.agent = AgentLoop.resume(self.session, session_id)
             n = len(self.agent.trajectory.turns)
-            title = self.agent.trajectory.title or "untitled"
-            self.console.print(f"  [green]Resumed[/green] [bold]{session_id}[/bold] — {title} ({n} turns)")
+            name = self.agent.session_info.name
+            title = name or self.agent.trajectory.title or "untitled"
+            display_id = self.agent.session_id
+            self.console.print(f"  [green]Resumed[/green] [bold]{display_id}[/bold] — {title} ({n} turns)")
 
             # Show last turn as context
             if self.agent.trajectory.turns:

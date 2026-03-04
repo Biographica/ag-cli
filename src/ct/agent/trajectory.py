@@ -150,9 +150,55 @@ class Trajectory:
 
     @classmethod
     def list_sessions(cls) -> list[dict]:
-        """List all saved sessions, most recent first."""
+        """List all saved sessions, most recent first.
+
+        Scans both the new directory layout (``sessions/{id}/session_info.json``)
+        and the legacy flat-file layout (``sessions/*.jsonl``), deduplicating
+        by ``session_id``.
+        """
         sessions_dir = cls.sessions_dir()
-        sessions = []
+        seen: set[str] = set()
+        sessions: list[dict] = []
+
+        # 1. New layout — subdirs with session_info.json (preferred)
+        for sub in sessions_dir.iterdir():
+            if not sub.is_dir():
+                continue
+            manifest = sub / "session_info.json"
+            if manifest.exists():
+                try:
+                    data = json.loads(manifest.read_text(encoding="utf-8"))
+                    sid = data.get("session_id", sub.name)
+                    meta = {
+                        "session_id": sid,
+                        "name": data.get("name"),
+                        "title": data.get("name"),  # compat with display code
+                        "created_at": data.get("created_at", ""),
+                        "status": data.get("status", "active"),
+                        "path": str(sub),
+                    }
+                    # Try to get n_turns from trajectory file
+                    traj_path = sub / "trajectory.jsonl"
+                    if traj_path.exists():
+                        try:
+                            with open(traj_path) as f:
+                                first_line = f.readline().strip()
+                                if first_line:
+                                    traj_meta = json.loads(first_line)
+                                    if traj_meta.get("type") == "meta":
+                                        meta["n_turns"] = traj_meta.get("n_turns", 0)
+                                        # Use trajectory title as fallback
+                                        if not meta["title"]:
+                                            meta["title"] = traj_meta.get("title")
+                        except (json.JSONDecodeError, OSError):
+                            pass
+                    meta.setdefault("n_turns", 0)
+                    sessions.append(meta)
+                    seen.add(sid)
+                except (json.JSONDecodeError, OSError):
+                    continue
+
+        # 2. Legacy layout — flat *.jsonl files with type=meta first line
         for path in sessions_dir.glob("*.jsonl"):
             try:
                 with open(path) as f:
@@ -160,10 +206,26 @@ class Trajectory:
                     if first_line:
                         meta = json.loads(first_line)
                         if meta.get("type") == "meta":
-                            meta["path"] = str(path)
-                            sessions.append(meta)
+                            sid = meta.get("session_id", "")
+                            if sid and sid not in seen:
+                                meta["path"] = str(path)
+                                sessions.append(meta)
+                                seen.add(sid)
             except (json.JSONDecodeError, OSError):
                 continue
-        # Sort by created_at descending (most recent first)
-        sessions.sort(key=lambda s: s.get("created_at", 0), reverse=True)
+
+        # Sort by created_at descending.  Handle both ISO strings and floats.
+        def _sort_key(s):
+            val = s.get("created_at", 0)
+            if isinstance(val, (int, float)):
+                return val
+            if isinstance(val, str) and val:
+                try:
+                    from datetime import datetime, timezone
+                    return datetime.fromisoformat(val).timestamp()
+                except (ValueError, TypeError):
+                    return 0
+            return 0
+
+        sessions.sort(key=_sort_key, reverse=True)
         return sessions

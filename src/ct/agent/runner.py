@@ -337,11 +337,14 @@ class AgentRunner:
         if self.trajectory and self.trajectory.turns:
             history = self.trajectory.context_for_planner()
 
+        output_dir = config.get("sandbox.output_dir")
+
         system_prompt = build_system_prompt(
             self.session,
             tool_names=tool_names,
             data_context=data_context,
             history=history,
+            output_dir=output_dir,
         )
 
         # ----- Configure Agent SDK -----

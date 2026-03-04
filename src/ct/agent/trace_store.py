@@ -107,10 +107,13 @@ class TraceStore:
         store.flush()  # persist to ~/.ct/sessions/abc-123.trace.jsonl
     """
 
-    def __init__(self, session_id: str):
+    def __init__(self, session_id: str, trace_dir: Path | None = None):
         self.session_id = session_id
         self._events: list[dict] = []
-        self._path = _sessions_dir() / f"{session_id}.trace.jsonl"
+        if trace_dir is not None:
+            self._path = Path(trace_dir) / "trace.jsonl"
+        else:
+            self._path = _sessions_dir() / f"{session_id}.trace.jsonl"
 
     @property
     def path(self) -> Path:
@@ -194,35 +197,77 @@ class TraceStore:
 
     @staticmethod
     def find_trace(session_id: str | None = None) -> Path | None:
-        """Find a trace file by session ID prefix, or return the most recent.
+        """Find a trace file by session ID, name, or prefix.
+
+        Searches both new layout (``sessions/{id}/trace.jsonl``) and legacy
+        layout (``sessions/{id}.trace.jsonl``).  Also supports name-based
+        lookup by scanning ``session_info.json`` manifests.
 
         Args:
-            session_id: Session ID or prefix to match. If None, returns
-                the most recent trace file.
+            session_id: Session ID, name, or prefix to match.  If None,
+                returns the most recent trace file.
 
         Returns:
             Path to the trace file, or None if not found.
         """
         sessions_dir = _sessions_dir()
-        traces = sorted(
-            sessions_dir.glob("*.trace.jsonl"),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True,
-        )
-        if not traces:
+
+        # Collect all trace files from both layouts
+        all_traces: list[Path] = []
+
+        # New layout: sessions/{id}/trace.jsonl
+        for sub in sessions_dir.iterdir():
+            if sub.is_dir():
+                candidate = sub / "trace.jsonl"
+                if candidate.exists():
+                    all_traces.append(candidate)
+
+        # Legacy layout: sessions/{id}.trace.jsonl
+        for t in sessions_dir.glob("*.trace.jsonl"):
+            all_traces.append(t)
+
+        if not all_traces:
             return None
 
+        all_traces.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
         if session_id is None:
-            return traces[0]
+            return all_traces[0]
 
-        # Exact match first
-        exact = sessions_dir / f"{session_id}.trace.jsonl"
-        if exact.exists():
-            return exact
+        # New layout exact match
+        new_exact = sessions_dir / session_id / "trace.jsonl"
+        if new_exact.exists():
+            return new_exact
 
-        # Prefix match
-        for t in traces:
-            if t.stem.replace(".trace", "").startswith(session_id):
-                return t
+        # Legacy exact match
+        legacy_exact = sessions_dir / f"{session_id}.trace.jsonl"
+        if legacy_exact.exists():
+            return legacy_exact
+
+        # Name-based lookup via session_info.json manifests
+        for sub in sessions_dir.iterdir():
+            if sub.is_dir():
+                manifest = sub / "session_info.json"
+                if manifest.exists():
+                    try:
+                        data = json.loads(manifest.read_text(encoding="utf-8"))
+                        if data.get("name") == session_id:
+                            trace = sub / "trace.jsonl"
+                            if trace.exists():
+                                return trace
+                    except (json.JSONDecodeError, OSError):
+                        continue
+
+        # Prefix match across both layouts
+        for t in all_traces:
+            if t.name == "trace.jsonl":
+                # New layout: parent dir name is the session ID
+                if t.parent.name.startswith(session_id):
+                    return t
+            else:
+                # Legacy layout: {id}.trace.jsonl
+                file_id = t.name.replace(".trace.jsonl", "")
+                if file_id.startswith(session_id):
+                    return t
 
         return None

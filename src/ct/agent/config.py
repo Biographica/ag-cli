@@ -70,7 +70,7 @@ DEFAULTS = {
     "compute.default_provider": "lambda",
 
     "sandbox.timeout": 30,
-    "sandbox.output_dir": str(Path.cwd() / "outputs"),
+    "sandbox.output_dir": None,
     "sandbox.max_retries": 2,
 
     "agent.max_iterations": 3,

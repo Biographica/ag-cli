@@ -2,12 +2,6 @@
   <img src="assets/harvest-badge.svg" alt="Harvest" height="40">
 </p>
 
-# Harvest
-
-An autonomous agent for plant science research. Like Claude Code, but for biology.
-
-Harvest takes natural language questions about genes, species, and traits — then plans a multi-step research workflow, selects the right tools, executes them across species, and returns data-backed conclusions with citations.
-
 ```
   ██╗  ██╗ █████╗ ██████╗ ██╗   ██╗███████╗███████╗████████╗
   ██║  ██║██╔══██╗██╔══██╗██║   ██║██╔════╝██╔════╝╚══██╔══╝
@@ -20,6 +14,10 @@ Harvest takes natural language questions about genes, species, and traits — th
   ..  ..  ..  ..  |   '---'    |= ||  ||  ||  ||  ||  ||  ||
                  (O)===========(o) ||  ||  ||  ||  ||  ||  ||
 ```
+
+An autonomous agent for plant science research. Like Claude Code, but for agricultural biotechnology.
+
+Harvest takes natural language questions about genes, species, and traits — then plans a multi-step research workflow, selects the right tools, executes them across species, and returns data-backed conclusions with citations.
 
 ## Quick Start
 

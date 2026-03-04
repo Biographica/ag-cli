@@ -34,6 +34,10 @@ BANNER = """
 [bold #20edca]  ██╔══██║██╔══██║██╔══██╗╚██╗ ██╔╝██╔══╝  ╚════██║   ██║   [/]
 [bold #10e9e4]  ██║  ██║██║  ██║██║  ██║ ╚████╔╝ ███████╗███████║   ██║   [/]
 [bold #00e5ff]  ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚══════╝   ╚═╝   [/]
+[bold #00e5ff]                       .---.      ,,  ,,  ,,  ,,  ,,  ,,  ,,  [/]
+[bold #00e5ff]                  .---|   |----.  ||  ||  ||  ||  ||  ||  ||  [/]
+[bold #00e5ff]  ..  ..  ..  ..  |   '---'    |= ||  ||  ||  ||  ||  ||  ||  [/]
+[bold #00e5ff]                 (O)===========(o) ||  ||  ||  ||  ||  ||  || [/]
 """
 
 app = typer.Typer(
@@ -1188,8 +1192,11 @@ def run_cmd(
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output directory for reports"),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="LLM model to use"),
     agents: Optional[int] = typer.Option(None, "--agents", "-a", help="Run with N parallel research agents"),
-    resume: Optional[str] = typer.Option(None, "--resume", "-r", help="Resume a previous session (ID or 'last')"),
+    resume: Optional[str] = typer.Option(None, "--resume", "-r", help="Resume a previous session (ID, name, or 'last')"),
     continue_last: bool = typer.Option(False, "--continue", "-c", help="Continue the most recent session"),
+    name: Optional[str] = typer.Option(None, "--name", "-n", help="Name the session for easy recall"),
+    temp: bool = typer.Option(False, "--temp", help="Ephemeral session — prompt to keep/discard on exit"),
+    working_dir: Optional[Path] = typer.Option(None, "--working-dir", "-w", help="Working directory for sandboxed execution"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
     version: bool = typer.Option(False, "--version", "-V", help="Show version"),
 ):
@@ -1228,14 +1235,24 @@ def run_cmd(
 
     if query:
         # Single query mode
-        run_query(query, context, output, model, verbose, agents=agents)
+        run_query(
+            query, context, output, model, verbose, agents=agents,
+            session_name=name, session_temp=temp,
+            session_working_dir=str(working_dir) if working_dir else None,
+        )
     else:
         # Interactive mode
-        run_interactive(context, output, model, verbose, resume_id=resume_id)
+        run_interactive(
+            context, output, model, verbose, resume_id=resume_id,
+            session_name=name, session_temp=temp,
+            session_working_dir=str(working_dir) if working_dir else None,
+        )
 
 
 def run_query(query: str, context: dict, output: Optional[Path],
-              model: Optional[str], verbose: bool, agents: Optional[int] = None):
+              model: Optional[str], verbose: bool, agents: Optional[int] = None,
+              session_name: Optional[str] = None, session_temp: bool = False,
+              session_working_dir: Optional[str] = None):
     """Execute a single research query."""
     from ct.agent.config import Config
 
@@ -1289,7 +1306,13 @@ def run_query(query: str, context: dict, output: Optional[Path],
         result = agent.run(query, context)
     else:
         from ct.agent.loop import AgentLoop, ClarificationNeeded
-        agent = AgentLoop(session)
+        agent = AgentLoop(
+            session,
+            name=session_name,
+            output_dir=str(output) if output else None,
+            working_dir=session_working_dir,
+            temp=session_temp,
+        )
         try:
             result = agent.run(query, context)
         except ClarificationNeeded as e:
@@ -1418,7 +1441,9 @@ def print_banner():
 
 
 def run_interactive(context: dict, output: Optional[Path],
-                    model: Optional[str], verbose: bool, resume_id: str = None):
+                    model: Optional[str], verbose: bool, resume_id: str = None,
+                    session_name: Optional[str] = None, session_temp: bool = False,
+                    session_working_dir: Optional[str] = None):
     """Run interactive session."""
     from ct.agent.config import Config
 
@@ -1444,7 +1469,14 @@ def run_interactive(context: dict, output: Optional[Path],
     console.print()
 
     terminal = InteractiveTerminal(config=cfg, verbose=verbose)
-    terminal.run(initial_context=context, resume_id=resume_id)
+    terminal.run(
+        initial_context=context,
+        resume_id=resume_id,
+        session_name=session_name,
+        session_output_dir=str(output) if output else None,
+        session_working_dir=session_working_dir,
+        session_temp=session_temp,
+    )
 
 
 def entry():

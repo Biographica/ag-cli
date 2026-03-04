@@ -50,6 +50,16 @@ def _is_allowed(path: Path, config=None) -> bool:
     return False
 
 
+def _is_within_output(path: Path, out_dir: Path) -> bool:
+    """Check if a resolved path is under the output directory."""
+    try:
+        resolved = path.resolve(strict=False)
+        resolved.relative_to(out_dir.resolve())
+        return True
+    except ValueError:
+        return False
+
+
 def _is_within_cwd(path: Path) -> bool:
     """Check if a resolved path is under the current working directory.
 
@@ -291,20 +301,27 @@ def edit_file(path: str, old_string: str, new_string: str, **kwargs) -> dict:
     description="Create a new file with the given content",
     category="files",
     parameters={
-        "path": "Path for the new file (must be within CWD)",
+        "path": "Filename for the new file (saved to session output directory)",
         "content": "Content to write to the file",
     },
     usage_guide=(
-        "Use to create new files (scripts, configs, data files) in the working directory. "
-        "Will not overwrite existing files — use edit_file for modifications."
+        "Use to create new files (scripts, configs, data files). Files are saved to the "
+        "session output directory by default. Will not overwrite existing files — use edit_file for modifications."
     ),
 )
-def create_file(path: str, content: str, **kwargs) -> dict:
+def create_file(path: str, content: str, _session=None, **kwargs) -> dict:
     """Create a new file. Refuses to overwrite existing files."""
+    config = _session.config if _session else None
+    out_dir = _output_dir(config)
+
     p = Path(path).expanduser()
 
-    if not _is_within_cwd(p):
-        return {"summary": f"Access denied: {path} is outside working directory.", "error": "path_not_allowed"}
+    # If path is relative (no leading /), resolve within the output directory
+    if not p.is_absolute():
+        p = out_dir / p
+
+    if not _is_within_cwd(p) and not _is_within_output(p, out_dir):
+        return {"summary": f"Access denied: {path} is outside allowed directories.", "error": "path_not_allowed"}
     if _is_protected(p):
         return {"summary": f"Protected path: {path} cannot be created.", "error": "path_protected"}
     if p.exists():

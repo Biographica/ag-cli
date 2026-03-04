@@ -163,6 +163,81 @@ class TestPersistence:
         monkeypatch.setattr(Trajectory, "sessions_dir", staticmethod(lambda: tmp_path))
         assert Trajectory.list_sessions() == []
 
+    def test_list_sessions_new_layout(self, tmp_path, monkeypatch):
+        """list_sessions() should find sessions stored as subdirs with session_info.json."""
+        monkeypatch.setattr(Trajectory, "sessions_dir", staticmethod(lambda: tmp_path))
+
+        # Create a new-layout session
+        session_dir = tmp_path / "abc123"
+        session_dir.mkdir()
+        (session_dir / "session_info.json").write_text(json.dumps({
+            "session_id": "abc123",
+            "name": "flowering-time",
+            "created_at": "2025-06-01T12:00:00+00:00",
+            "status": "active",
+        }))
+        # Also write a trajectory file so n_turns is populated
+        t = Trajectory(session_id="abc123", title="Flowering analysis")
+        t.add_turn("Q1", "A1")
+        t.save(session_dir / "trajectory.jsonl")
+
+        sessions = Trajectory.list_sessions()
+        assert len(sessions) == 1
+        assert sessions[0]["session_id"] == "abc123"
+        assert sessions[0]["name"] == "flowering-time"
+        assert sessions[0]["n_turns"] == 1
+
+    def test_list_sessions_mixed(self, tmp_path, monkeypatch):
+        """list_sessions() should merge new-layout and legacy sessions, deduplicating."""
+        monkeypatch.setattr(Trajectory, "sessions_dir", staticmethod(lambda: tmp_path))
+
+        # New-layout session
+        session_dir = tmp_path / "new001"
+        session_dir.mkdir()
+        (session_dir / "session_info.json").write_text(json.dumps({
+            "session_id": "new001",
+            "name": "new-session",
+            "created_at": "2025-06-02T12:00:00+00:00",
+        }))
+
+        # Legacy session (flat file)
+        t = Trajectory(session_id="old001")
+        t.created_at = 1000
+        t.title = "Legacy session"
+        t.add_turn("Q1", "A1")
+        t.save(tmp_path / "old001.jsonl")
+
+        sessions = Trajectory.list_sessions()
+        assert len(sessions) == 2
+        ids = [s["session_id"] for s in sessions]
+        assert "new001" in ids
+        assert "old001" in ids
+        # New session (2025) should be first
+        assert sessions[0]["session_id"] == "new001"
+
+    def test_list_sessions_dedup(self, tmp_path, monkeypatch):
+        """Sessions that exist in both layouts should not be listed twice."""
+        monkeypatch.setattr(Trajectory, "sessions_dir", staticmethod(lambda: tmp_path))
+
+        # New-layout version
+        session_dir = tmp_path / "duped"
+        session_dir.mkdir()
+        (session_dir / "session_info.json").write_text(json.dumps({
+            "session_id": "duped",
+            "name": "dup-session",
+            "created_at": "2025-06-01T12:00:00+00:00",
+        }))
+
+        # Legacy flat file version of the same session
+        t = Trajectory(session_id="duped")
+        t.created_at = 1000
+        t.add_turn("Q1", "A1")
+        t.save(tmp_path / "duped.jsonl")
+
+        sessions = Trajectory.list_sessions()
+        assert len(sessions) == 1
+        assert sessions[0]["session_id"] == "duped"
+
     def test_roundtrip_preserves_entities_and_tools(self, tmp_path):
         traj = Trajectory(session_id="rt")
         steps = [

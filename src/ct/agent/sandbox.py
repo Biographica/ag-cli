@@ -89,13 +89,9 @@ def _make_safe_open(output_dir: Path, extra_read_dirs: list[Path] = None):
             )
 
         writes = any(flag in mode for flag in ("w", "a", "x", "+"))
-        tmp_root = Path("/tmp").resolve()
-        if writes and not (
-            _is_within(resolved, output_root)
-            or _is_within(resolved, tmp_root)
-        ):
+        if writes and not _is_within(resolved, output_root):
             raise PermissionError(
-                f"Sandbox file writes are restricted to {output_root} and /tmp"
+                f"Sandbox file writes are restricted to {output_root}"
             )
 
         if writes:

@@ -29,6 +29,7 @@ dependencies = [
     "nbformat>=5.7",
     "pyyaml>=6.0",
     "gffutils>=0.13",
+    "matplotlib>=3.7",
 ]
 
 [project.optional-dependencies]

@@ -95,6 +95,7 @@ def build_system_prompt(
     tool_names: list[str] | None = None,
     data_context: str | None = None,
     history: str | None = None,
+    output_dir: str | None = None,
 ) -> str:
     """Build the unified system prompt for the Agent SDK runner.
 
@@ -103,6 +104,7 @@ def build_system_prompt(
         tool_names: Names of tools available in the MCP server (for reference).
         data_context: Free-text description of available data files / directories.
         history: Prior conversation turns (for interactive multi-turn sessions).
+        output_dir: Path to the session output directory for saving files.
 
     Returns:
         The complete system prompt string.
@@ -133,6 +135,17 @@ def build_system_prompt(
             "- **singlecell.cluster**, **singlecell.trajectory**, **singlecell.cell_type_annotate**: Single-cell analysis\n"
             "\nFor data analysis questions, prefer **run_python** — it is the most powerful tool.\n"
             "For plant biology questions, combine domain tools with your expertise across species.\n"
+        )
+
+    # 2b. Output directory
+    if output_dir:
+        parts.append(
+            f"\n## Output Directory\n"
+            f"Your session output directory is: `{output_dir}`\n\n"
+            f"Save ALL files here — reports, plots, CSVs, and any other artifacts.\n"
+            f"- In `run_python`, use `OUTPUT_DIR` (pre-set to this path) for saving plots and data files.\n"
+            f"- Use `files.write_report` and `files.write_csv` for structured output.\n"
+            f"- Do NOT write to `/tmp` or other locations — all writes are restricted to this directory.\n"
         )
 
     # 3. Workflow guides (compact — key sequences for common tasks)
