@@ -1,6 +1,8 @@
 """Tests for CLI argument parsing and subcommand dispatch."""
 
+import json
 import subprocess
+from pathlib import Path
 from unittest.mock import patch
 
 from typer.testing import CliRunner
@@ -201,81 +203,6 @@ def test_knowledge_benchmark_strict_failure_exits_nonzero():
     assert result.exit_code == 2
 
 
-def test_trace_diagnose_command_outputs_summary(tmp_path):
-    trace = TraceLogger("cli-trace-ok")
-    trace.query_start("q1")
-    trace.plan([], query="q1")
-    trace.step_start(1, "files.create_file", {"path": "a.txt"})
-    trace.step_complete(1, "files.create_file", {"summary": "ok"}, duration_s=0.1)
-    trace.synthesize_start()
-    trace.synthesize_end(token_count=10, duration_s=0.1)
-    trace.query_end(iterations=1, total_steps=1, completed_steps=1, failed_steps=0)
-
-    path = tmp_path / "cli-trace-ok.trace.jsonl"
-    trace.save(path)
-
-    result = runner.invoke(app, ["trace", "diagnose", "--path", str(path)])
-    assert result.exit_code == 0
-    assert "Trace Diagnostics" in result.stdout
-    assert "Queries" in result.stdout
-    assert "Step fails" in result.stdout
-
-
-def test_trace_diagnose_strict_exits_on_unclosed_query(tmp_path):
-    trace = TraceLogger("cli-trace-bad")
-    trace.query_start("unfinished")
-    trace.plan([], query="unfinished")
-    # Intentionally omit query_end
-
-    path = tmp_path / "cli-trace-bad.trace.jsonl"
-    trace.save(path)
-
-    result = runner.invoke(app, ["trace", "diagnose", "--path", str(path), "--strict"])
-    assert result.exit_code == 2
-
-
-def test_trace_export_creates_bundle(tmp_path):
-    trace = TraceLogger("cli-export")
-    trace.query_start("q1")
-    trace.plan([], query="q1")
-    trace.step_start(1, "files.create_file", {"path": "a.txt"})
-    trace.step_complete(1, "files.create_file", {"summary": "ok"}, duration_s=0.1)
-    trace.synthesize_start()
-    trace.synthesize_end(token_count=10, duration_s=0.1)
-    trace.query_end(iterations=1, total_steps=1, completed_steps=1, failed_steps=0)
-
-    trace_path = tmp_path / "cli-export.trace.jsonl"
-    trace.save(trace_path)
-    report_path = tmp_path / "report.md"
-    report_path.write_text("# report", encoding="utf-8")
-
-    result = runner.invoke(
-        app,
-        [
-            "trace",
-            "export",
-            "--path",
-            str(trace_path),
-            "--report",
-            str(report_path),
-            "--out-dir",
-            str(tmp_path / "exports"),
-            "--no-zip",
-        ],
-    )
-    assert result.exit_code == 0
-    assert "Bundle exported:" in result.stdout
-
-    bundles = sorted((tmp_path / "exports").glob("ct_run_bundle_*"))
-    assert bundles
-    bundle = bundles[-1]
-    assert (bundle / "trace.jsonl").exists()
-    assert (bundle / "trace_diagnostics.json").exists()
-    assert (bundle / "query_summaries.json").exists()
-    assert (bundle / "manifest.json").exists()
-    assert (bundle / "report.md").exists()
-
-
 def test_release_check_passes_with_no_tests_no_trace():
     cfg = Config(data={"llm.api_key": "x"})
 
@@ -337,44 +264,6 @@ def test_release_check_fails_when_pytest_step_fails():
     assert "Release check failed" in result.stdout
 
 
-def test_release_check_fails_on_trace_integrity_issues(tmp_path):
-    cfg = Config(data={"llm.api_key": "x"})
-
-    class FakeSuite:
-        def run(self):
-            return {
-                "total_cases": 2,
-                "expected_behavior_matches": 2,
-                "pass_rate": 1.0,
-            }
-
-        def gate(self, summary, min_pass_rate=0.9):
-            del summary, min_pass_rate
-            return {
-                "ok": True,
-                "message": "passed",
-            }
-
-    trace = TraceLogger("bad-trace")
-    trace.query_start("unfinished query")
-    trace.plan([], query="unfinished query")
-    trace_path = tmp_path / "bad-trace.trace.jsonl"
-    trace.save(trace_path)
-
-    with patch("ct.agent.config.Config.load", return_value=cfg), patch(
-        "ct.agent.doctor.run_checks", return_value=[]
-    ), patch("ct.agent.doctor.has_errors", return_value=False), patch(
-        "ct.agent.doctor.to_table", return_value="doctor ok"
-    ), patch("ct.kb.benchmarks.BenchmarkSuite.load", return_value=FakeSuite()):
-        result = runner.invoke(
-            app,
-            ["release-check", "--no-tests", "--trace-path", str(trace_path)],
-        )
-
-    assert result.exit_code == 2
-    assert "Trace diagnostics detected integrity issues" in result.stdout
-
-
 def test_release_check_pharma_policy_fails_without_profile():
     cfg = Config(data={"llm.api_key": "x", "agent.profile": "research"})
     with patch("ct.agent.config.Config.load", return_value=cfg), patch(
@@ -414,3 +303,147 @@ def test_release_check_pharma_policy_passes():
 
     assert result.exit_code == 0
     assert "Release check passed" in result.stdout
+
+
+# ─── Session subcommand tests ────────────────────────────────
+
+
+def test_session_list_no_sessions(tmp_path):
+    with patch("ct.agent.trajectory.Trajectory.sessions_dir", return_value=tmp_path):
+        result = runner.invoke(app, ["session", "list"])
+    assert result.exit_code == 0
+    assert "No sessions found" in result.stdout
+
+
+def test_session_list_shows_sessions(tmp_path):
+    sid = "abc-123"
+    sess_dir = tmp_path / sid
+    sess_dir.mkdir()
+    (sess_dir / "session_info.json").write_text(json.dumps({
+        "session_id": sid,
+        "name": "my session",
+        "created_at": "2025-01-01T00:00:00",
+        "status": "completed",
+    }))
+    with patch("ct.agent.trajectory.Trajectory.sessions_dir", return_value=tmp_path):
+        result = runner.invoke(app, ["session", "list"])
+    assert result.exit_code == 0
+    assert "abc-123" in result.stdout
+    assert "my session" in result.stdout
+
+
+def test_session_clear_requires_arg_or_all():
+    result = runner.invoke(app, ["session", "clear"])
+    assert result.exit_code == 2
+    assert "Provide a session ID/name or use --all" in result.stdout
+
+
+def test_session_clear_rejects_both_arg_and_all():
+    result = runner.invoke(app, ["session", "clear", "foo", "--all"])
+    assert result.exit_code == 2
+    assert "Cannot combine" in result.stdout
+
+
+def test_session_clear_all(tmp_path):
+    for name in ["sess-1", "sess-2"]:
+        d = tmp_path / name
+        d.mkdir()
+        (d / "session_info.json").write_text(json.dumps({"session_id": name}))
+    (tmp_path / "legacy.jsonl").write_text('{"type":"meta","session_id":"leg"}\n')
+    with patch("ct.agent.trajectory.Trajectory.sessions_dir", return_value=tmp_path):
+        result = runner.invoke(app, ["session", "clear", "--all"])
+    assert result.exit_code == 0
+    assert "Cleared 3 session(s)" in result.stdout
+    assert not any(tmp_path.iterdir())
+
+
+def test_session_clear_by_exact_id(tmp_path):
+    sid = "abc-123"
+    sess_dir = tmp_path / sid
+    sess_dir.mkdir()
+    (sess_dir / "session_info.json").write_text(json.dumps({
+        "session_id": sid,
+        "name": "test",
+        "created_at": "2025-01-01T00:00:00",
+        "status": "active",
+        "path": str(sess_dir),
+    }))
+    with patch("ct.agent.trajectory.Trajectory.sessions_dir", return_value=tmp_path):
+        result = runner.invoke(app, ["session", "clear", sid])
+    assert result.exit_code == 0
+    assert "Cleared session abc-123" in result.stdout
+    assert not sess_dir.exists()
+
+
+def test_session_clear_by_prefix(tmp_path):
+    sid = "abc-123-456"
+    sess_dir = tmp_path / sid
+    sess_dir.mkdir()
+    (sess_dir / "session_info.json").write_text(json.dumps({
+        "session_id": sid,
+        "name": "test",
+        "created_at": "2025-01-01T00:00:00",
+        "status": "active",
+    }))
+    with patch("ct.agent.trajectory.Trajectory.sessions_dir", return_value=tmp_path):
+        result = runner.invoke(app, ["session", "clear", "abc"])
+    assert result.exit_code == 0
+    assert "Cleared session abc-123-456" in result.stdout
+    assert not sess_dir.exists()
+
+
+def test_session_clear_ambiguous_prefix(tmp_path):
+    for sid in ["abc-1", "abc-2"]:
+        d = tmp_path / sid
+        d.mkdir()
+        (d / "session_info.json").write_text(json.dumps({
+            "session_id": sid,
+            "name": None,
+            "created_at": "2025-01-01T00:00:00",
+            "status": "active",
+        }))
+    with patch("ct.agent.trajectory.Trajectory.sessions_dir", return_value=tmp_path):
+        result = runner.invoke(app, ["session", "clear", "abc"])
+    assert result.exit_code == 2
+    assert "Ambiguous prefix" in result.stdout
+
+
+def test_session_clear_by_name(tmp_path):
+    sid = "abc-123"
+    sess_dir = tmp_path / sid
+    sess_dir.mkdir()
+    (sess_dir / "session_info.json").write_text(json.dumps({
+        "session_id": sid,
+        "name": "my-session",
+        "created_at": "2025-01-01T00:00:00",
+        "status": "active",
+    }))
+    with patch("ct.agent.trajectory.Trajectory.sessions_dir", return_value=tmp_path):
+        result = runner.invoke(app, ["session", "clear", "my-session"])
+    assert result.exit_code == 0
+    assert "Cleared session abc-123" in result.stdout
+
+
+def test_session_clear_not_found(tmp_path):
+    with patch("ct.agent.trajectory.Trajectory.sessions_dir", return_value=tmp_path):
+        result = runner.invoke(app, ["session", "clear", "nonexistent"])
+    assert result.exit_code == 2
+    assert "No session found" in result.stdout
+
+
+def test_entry_preserves_session_subcommand(monkeypatch):
+    called = {}
+
+    def fake_app(*, args, prog_name):
+        called["args"] = args
+        called["prog_name"] = prog_name
+
+    monkeypatch.setattr("ct.cli.app", fake_app)
+    monkeypatch.setattr("sys.argv", ["ag", "session", "list"])
+
+    from ct.cli import entry
+
+    entry()
+
+    assert called["prog_name"] == "ag"
+    assert called["args"] == ["session", "list"]

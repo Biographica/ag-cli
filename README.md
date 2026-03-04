@@ -122,6 +122,87 @@ flowchart TD
     style INIT_PHASE fill:#f5f5f5,stroke:#999
 ```
 
+## CLI Commands
+
+| Command | Description | Notable flags |
+|---------|-------------|---------------|
+| `ag "query"` | Single-query mode — run one research question | `--model`, `--agents`, `--output`, `--verbose` |
+| `ag` | Interactive mode (REPL) | `--resume`, `--continue`, `--name`, `--temp` |
+| `ag setup` | First-time setup wizard | `--api-key` |
+| `ag keys` | Show status of optional API keys | |
+| `ag doctor` | Run environment and config health checks | |
+| `ag config set <key> <value>` | Set a configuration value | |
+| `ag config get <key>` | Get a configuration value | |
+| `ag config show` | Show all configuration | |
+| `ag config validate` | Validate configuration and report issues | |
+| `ag session list` | List all saved sessions | |
+| `ag session clear [id\|name]` | Remove session data | `--all` |
+| `ag data pull <dataset>` | Download a dataset for local use | `--output` |
+| `ag data status` | Show status of local datasets | |
+| `ag species list` | Display species registry with taxon IDs and genome builds | |
+| `ag tool list` | List all available tools | |
+| `ag report list` | List available markdown reports | |
+| `ag report publish` | Convert markdown report to shareable HTML | `--path`, `--out` |
+| `ag report show` | Open an HTML report in the browser | `--path` |
+| `ag report notebook` | Export a session as Jupyter notebook | `--session`, `--out`, `--html` |
+| `ag trace diagnose` | Diagnose issues from a trace file | `--path`, `--session-id`, `--json` |
+| `ag trace export` | Export a trace as a shareable bundle | `--path`, `--session-id`, `--report` |
+| `ag case-study list` | List curated case studies | |
+| `ag case-study run <id>` | Run a case study | `--threads`, `--model`, `--verbose` |
+
+## Interactive Commands
+
+Inside `ag` interactive mode, the following slash commands are available:
+
+**Research**
+
+| Command | Description |
+|---------|-------------|
+| `/agents <N> <query>` | Run a query with N parallel research agents |
+| `/plan` | Toggle plan mode — preview and approve before executing |
+| `/case-study list\|<id>` | Run or list curated case studies |
+
+**Session**
+
+| Command | Description |
+|---------|-------------|
+| `/sessions` | List recent sessions; `/sessions clear <id\|name\|all>` to remove |
+| `/resume <id\|name\|index>` | Resume a previous session |
+| `/name [name]` | Set or display session name |
+| `/compact` | Compress session context for longer runs |
+
+**Export**
+
+| Command | Description |
+|---------|-------------|
+| `/export` | Export current session transcript to markdown |
+| `/notebook` | Export current session as Jupyter notebook (.ipynb) |
+| `/copy` | Copy the last answer to clipboard |
+
+**Configuration**
+
+| Command | Description |
+|---------|-------------|
+| `/model` | Switch LLM model/provider interactively |
+| `/settings` | Configure UI and agent preferences |
+| `/config` | Show active runtime configuration |
+| `/keys` | Show API key setup status by service |
+| `/doctor` | Run readiness diagnostics and fix hints |
+| `/usage` | Show session token/cost usage |
+
+**Navigation**
+
+| Command | Description |
+|---------|-------------|
+| `/output` | Display current output directory |
+| `/workdir` | Display or set working directory |
+| `/tools` | List all tools with status (stable/experimental) |
+| `/help` | Show command reference with examples |
+| `/clear` | Clear the screen |
+| `/exit` | Exit the terminal |
+
+> **Shell escape:** prefix any command with `!` to run it in the shell (e.g., `!ls .`). Pipes and chaining are not supported.
+
 ## Species Support
 
 Harvest includes a YAML species registry with **20+ species** covering major crops, model plants, and reference organisms:

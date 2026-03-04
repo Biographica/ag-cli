@@ -322,6 +322,98 @@ def species_list():
     console.print(table)
 
 
+# ─── Session subcommands ──────────────────────────────────────
+
+session_app = typer.Typer(help="Manage sessions")
+app.add_typer(session_app, name="session")
+
+
+@session_app.command("list")
+def session_list():
+    """List all saved sessions."""
+    from ct.agent.trajectory import Trajectory
+
+    sessions = Trajectory.list_sessions()
+    if not sessions:
+        console.print("No sessions found.")
+        raise typer.Exit()
+    table = Table(title="Sessions")
+    table.add_column("ID", style="cyan")
+    table.add_column("Name")
+    table.add_column("Created")
+    table.add_column("Status")
+    table.add_column("Turns", justify="right")
+    for s in sessions:
+        table.add_row(
+            s["session_id"],
+            s.get("name") or "",
+            s.get("created_at", "")[:19],
+            s.get("status", ""),
+            str(s.get("n_turns", 0)),
+        )
+    console.print(table)
+
+
+@session_app.command("clear")
+def session_clear(
+    name_or_id: Optional[str] = typer.Argument(None, help="Session ID or name to clear"),
+    all_sessions: bool = typer.Option(False, "--all", help="Clear all sessions"),
+):
+    """Remove session data from ~/.ct/sessions/."""
+    from ct.agent.trajectory import Trajectory
+
+    if not name_or_id and not all_sessions:
+        console.print("[red]Provide a session ID/name or use --all.[/red]")
+        raise typer.Exit(code=2)
+    if name_or_id and all_sessions:
+        console.print("[red]Cannot combine a session ID/name with --all.[/red]")
+        raise typer.Exit(code=2)
+
+    sessions_dir = Trajectory.sessions_dir()
+
+    if all_sessions:
+        count = 0
+        for child in list(sessions_dir.iterdir()):
+            if child.is_dir():
+                shutil.rmtree(child)
+                count += 1
+            elif child.is_file() and child.suffix == ".jsonl":
+                child.unlink()
+                count += 1
+        console.print(f"Cleared {count} session(s).")
+        return
+
+    # Single-session mode: resolve name_or_id
+    sessions = Trajectory.list_sessions()
+
+    # Exact match on session_id
+    exact = [s for s in sessions if s["session_id"] == name_or_id]
+    if not exact:
+        # Prefix match on session_id
+        prefix = [s for s in sessions if s["session_id"].startswith(name_or_id)]
+        if len(prefix) == 1:
+            exact = prefix
+        elif len(prefix) > 1:
+            console.print("[red]Ambiguous prefix. Matching sessions:[/red]")
+            for s in prefix:
+                console.print(f"  {s['session_id']}  {s.get('name') or ''}")
+            raise typer.Exit(code=2)
+    if not exact:
+        # Exact match on name
+        exact = [s for s in sessions if s.get("name") == name_or_id]
+    if not exact:
+        console.print(f"[red]No session found matching '{name_or_id}'.[/red]")
+        raise typer.Exit(code=2)
+
+    target = exact[0]
+    target_path = Path(target["path"])
+    if target_path.is_dir():
+        shutil.rmtree(target_path)
+    elif target_path.is_file():
+        target_path.unlink()
+    console.print(f"Cleared session {target['session_id']}.")
+
+
 # ─── Tool subcommands (direct tool access) ────────────────────
 
 tool_app = typer.Typer(help="Run individual tools directly")
@@ -621,7 +713,6 @@ def release_check_cmd(
     """Run a production release gate: doctor + tests + benchmark + trace diagnostics."""
     from ct.agent.config import Config
     from ct.agent.doctor import has_errors, run_checks, to_table
-    from ct.agent.trace import TraceLogger
     from ct.kb.benchmarks import BenchmarkSuite
 
     failed = False
@@ -698,6 +789,7 @@ def release_check_cmd(
             else:
                 console.print(f"[yellow]{msg}[/yellow]")
         else:
+            from ct.agent.trace import TraceLogger
             trace = TraceLogger.load(resolved_trace)
             diag = trace.diagnostics()
             _print_trace_diagnostics_table(diag, title=f"Trace Diagnostics: {resolved_trace.name}")
@@ -1479,36 +1571,24 @@ def run_interactive(context: dict, output: Optional[Path],
     )
 
 
+# ─── Dynamic passthrough set ─────────────────────────────────
+# Built from the Typer app's registered commands so new subcommands
+# are automatically recognized without manual updates.
+_PASSTHROUGH_FLAGS = {"--help", "-h", "--install-completion", "--show-completion"}
+_REGISTERED_COMMANDS = set(typer.main.get_command(app).commands.keys())
+_PASSTHROUGH = _REGISTERED_COMMANDS | _PASSTHROUGH_FLAGS
+
+
 def entry():
     """Package entry point."""
     argv = list(sys.argv[1:])
-    passthrough = {
-        "config",
-        "data",
-        "tool",
-        "trace",
-        "knowledge",
-        "keys",
-        "doctor",
-        "setup",
-        "release-check",
-        "report",
-        "case-study",
-        "bench",
-        "run",
-        "species",
-        "--help",
-        "-h",
-        "--install-completion",
-        "--show-completion",
-    }
 
     # Route plain invocations to hidden `run` command so:
     #   ag                       -> interactive mode
     #   ag "question"            -> single-query mode
     #   ag --target FLC "q"      -> single-query with context
     # while preserving explicit subcommands like `ag config ...`.
-    if not argv or argv[0] not in passthrough:
+    if not argv or argv[0] not in _PASSTHROUGH:
         argv = ["run", *argv]
 
     app(args=argv, prog_name="ag")

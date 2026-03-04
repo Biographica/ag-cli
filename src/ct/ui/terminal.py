@@ -50,7 +50,7 @@ SLASH_COMMANDS = {
     "/notebook": "Export current session as Jupyter notebook (.ipynb)",
     "/compact": "Compress session context for longer runs",
     "/agents": "Run a query with N parallel research agents",
-    "/sessions": "List recent saved sessions",
+    "/sessions": "List recent sessions; /sessions clear <id|name|all> to remove",
     "/resume": "Resume a previous session by id/name/index",
     "/name": "Set or display session name",
     "/output": "Display current output directory",
@@ -819,7 +819,12 @@ class InteractiveTerminal:
                 self._compact_context(instructions)
                 continue
             if cmd in ("sessions", "/sessions"):
-                self._list_sessions()
+                parts = query.split(maxsplit=2)
+                if len(parts) > 1 and parts[1] == "clear":
+                    target = parts[2].strip() if len(parts) > 2 else None
+                    self._clear_session(target)
+                else:
+                    self._list_sessions()
                 continue
             if cmd.startswith("/resume"):
                 parts = query.split(maxsplit=1)
@@ -1374,6 +1379,55 @@ class InteractiveTerminal:
             self.console.print(f"  {current}[{i}] [bold]{sid}[/bold] — {display_name} ({n} turns, {ts})")
 
         self.console.print(f"\n  [dim]Use /resume <id|name|number> to restore.[/dim]")
+
+    def _clear_session(self, target: str | None):
+        """Clear session(s) by id/name or all."""
+        import shutil
+        from ct.agent.trajectory import Trajectory
+
+        sessions_dir = Trajectory.sessions_dir()
+
+        if not target:
+            self.console.print("  [dim]Usage: /sessions clear <id|name|all>[/dim]")
+            return
+
+        if target == "all":
+            count = 0
+            for child in list(sessions_dir.iterdir()):
+                if child.is_dir():
+                    shutil.rmtree(child)
+                    count += 1
+                elif child.is_file() and child.suffix == ".jsonl":
+                    child.unlink()
+                    count += 1
+            self.console.print(f"  [green]Cleared {count} session(s).[/green]")
+            return
+
+        # Resolve by id/prefix/name (same logic as CLI)
+        sessions = Trajectory.list_sessions()
+        exact = [s for s in sessions if s["session_id"] == target]
+        if not exact:
+            prefix = [s for s in sessions if s["session_id"].startswith(target)]
+            if len(prefix) == 1:
+                exact = prefix
+            elif len(prefix) > 1:
+                self.console.print("  [red]Ambiguous prefix. Matching sessions:[/red]")
+                for s in prefix:
+                    self.console.print(f"    {s['session_id']}  {s.get('name') or ''}")
+                return
+        if not exact:
+            exact = [s for s in sessions if s.get("name") == target]
+        if not exact:
+            self.console.print(f"  [red]No session found matching '{target}'.[/red]")
+            return
+
+        match = exact[0]
+        p = Path(match["path"])
+        if p.is_dir():
+            shutil.rmtree(p)
+        elif p.is_file():
+            p.unlink()
+        self.console.print(f"  [green]Cleared session {match['session_id']}.[/green]")
 
     def _resume_session(self, identifier: str = None):
         """Resume a previous session by ID, name, or list index."""

@@ -77,7 +77,7 @@ def run_checks(config: Config | None = None, session=None) -> list[DoctorCheck]:
         )
 
     # 3) Output directory availability
-    out_dir = Path(cfg.get("sandbox.output_dir", str(Path.cwd() / "outputs")))
+    out_dir = Path(cfg.get("sandbox.output_dir") or str(Path.cwd() / "outputs"))
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
         checks.append(
